@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { ArrowLeft, Check, MessageSquarePlus, RotateCcw, X } from "lucide-react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, Check, GitBranch, MessageSquarePlus, Plus, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Button, Field, inputClass } from "@/components/ui";
@@ -28,6 +28,8 @@ import {
   getEpisode,
   getInterventionForEpisode,
   listAccounts,
+  listEpisodeRelationships,
+  listEpisodes,
   listEpisodeUpdates,
   listReviewsForIntervention,
   trackEvent,
@@ -39,12 +41,14 @@ import {
   ageBucketLabels,
   changeTypeLabels,
   decisionImpactLabels,
+  episodeRelationshipTypeLabels,
   episodeUpdateTypeLabels,
   interventionTypeLabels,
   outcomeLabels,
   type Account,
   type DecisionImpact,
   type Episode,
+  type EpisodeRelationship,
   type EpisodeUpdate,
   type EpisodeUpdateType,
   type ExecutionState,
@@ -61,15 +65,30 @@ type TimelineItem =
   | { kind: "execution"; at: string; key: string; intervention: Intervention }
   | { kind: "review"; at: string; key: string; review: Review };
 
+type EpisodeTab = "current" | "action" | "continuity" | "history";
+
+const episodeTabs: { id: EpisodeTab; label: string }[] = [
+  { id: "current", label: "Agora" },
+  { id: "action", label: "Ação" },
+  { id: "continuity", label: "Continuidade" },
+  { id: "history", label: "Histórico" },
+];
+
 export default function EpisodeWorkspacePage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const id = params.id;
+  const requestedTab = searchParams.get("tab");
+  const activeTab: EpisodeTab = episodeTabs.some((tab) => tab.id === requestedTab) ? requestedTab as EpisodeTab : "current";
 
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [intervention, setIntervention] = useState<Intervention | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [updates, setUpdates] = useState<EpisodeUpdate[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [relationships, setRelationships] = useState<EpisodeRelationship[]>([]);
+  const [relatedEpisodes, setRelatedEpisodes] = useState<Episode[]>([]);
   const [legacyAccountId, setLegacyAccountId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -99,6 +118,16 @@ export default function EpisodeWorkspacePage() {
       if (!ep) return;
       if (!ep.account_id) setAccounts(await listAccounts());
       else setAccounts([]);
+
+      const [allRelationships, allEpisodes] = await Promise.all([listEpisodeRelationships(), listEpisodes()]);
+      const relevantRelationships = allRelationships.filter((relationship) =>
+        relationship.source_episode_id === id || relationship.target_episode_id === id,
+      );
+      const relatedIds = new Set(relevantRelationships.flatMap((relationship) => [relationship.source_episode_id, relationship.target_episode_id]));
+      relatedIds.delete(id);
+      setRelationships(relevantRelationships);
+      setRelatedEpisodes(allEpisodes.filter((candidate) => relatedIds.has(candidate.id)));
+
       const int = await getInterventionForEpisode(id);
       setIntervention(int);
       setUpdates(await listEpisodeUpdates(id));
@@ -218,6 +247,7 @@ export default function EpisodeWorkspacePage() {
     if (!episode || episode.closed_at) return;
     if (!intervention) {
       setShowIntervention(true);
+      router.replace(`/episodes/${episode.id}?tab=action`);
       return;
     }
     if (state === "execution_pending") {
@@ -230,9 +260,11 @@ export default function EpisodeWorkspacePage() {
     }
     if (["waiting_response", "recovering", "review_due"].includes(state)) {
       setShowReview(true);
+      router.replace(`/episodes/${episode.id}?tab=action`);
       return;
     }
     setShowUpdate(true);
+    router.replace(`/episodes/${episode.id}?tab=action`);
   }
 
   if (loading) return <AppShell><LoadingBlock /></AppShell>;
@@ -244,18 +276,21 @@ export default function EpisodeWorkspacePage() {
   const accountPrivateData = getAllAccountPrivateData();
   const note = getEpisodeNote(episode.id);
   const canClose = Boolean(latestReview && latestReview.outcome !== "too_early" && !episode.closed_at);
+  const incomingRelationship = relationships.find((relationship) => relationship.target_episode_id === episode.id) ?? null;
+  const previousEpisode = incomingRelationship ? relatedEpisodes.find((candidate) => candidate.id === incomingRelationship.source_episode_id) ?? null : null;
+  const outgoingRelationships = relationships.filter((relationship) => relationship.source_episode_id === episode.id);
 
   return (
     <AppShell>
-      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+      <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <div className="text-[10px] font-extrabold uppercase tracking-[0.11em] text-gray-400">{accountData ? <>CONTA · <Link href={`/accounts/${episode.account_id}`} className="hover:text-gray-700 hover:underline">{accountData.name}</Link></> : "CONTA NÃO VINCULADA"}</div>
           <h1 className="mt-2 text-3xl font-extrabold tracking-[-0.04em]">{alias}</h1>
-          <p className="mt-2 text-sm text-gray-500">{changeTypeLabels[episode.change_type]} · mudança percebida há {ageBucketLabels[episode.age_bucket]} · toda a história fica no mesmo workspace.</p>
+          <p className="mt-2 text-sm text-gray-500">{changeTypeLabels[episode.change_type]} · mudança percebida há {ageBucketLabels[episode.age_bucket]}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href="/" className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-gray-50"><ArrowLeft size={15} /> Voltar à fila</Link>
-          {!episode.closed_at ? <Button variant="light" onClick={() => setShowUpdate(true)}><span className="inline-flex items-center gap-2"><MessageSquarePlus size={15} /> Atualização</span></Button> : null}
+          {!episode.closed_at ? <button type="button" onClick={() => { setShowUpdate(true); router.replace(`/episodes/${episode.id}?tab=action`); }} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-100"><MessageSquarePlus size={15} /> Atualização</button> : null}
         </div>
       </div>
 
@@ -269,160 +304,255 @@ export default function EpisodeWorkspacePage() {
         </div>
       ) : null}
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_310px]">
-        <div className="space-y-4">
-          <section className="rounded-[18px] border border-gray-200 bg-white p-5 shadow-soft">
-            <div>
-              <h2 className="font-semibold">Trajetória do episódio</h2>
-              <p className="mt-1 text-xs leading-5 text-gray-500">O ponto não é um alerta isolado, mas a história de uma mudança que persiste, recebe uma intervenção e produz uma resposta.</p>
-            </div>
-
-            <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-b from-white to-gray-50 p-4">
-              <svg viewBox="0 0 800 145" className="h-40 w-full" preserveAspectRatio="none" aria-label="Trajetória ilustrativa do episódio">
-                <line x1="0" y1="42" x2="800" y2="42" stroke="#d1d5db" strokeWidth="2" strokeDasharray="6 6" />
-                <path d="M0 43 C90 39 150 45 220 41 C300 36 350 42 400 48 C455 55 500 72 548 82 C610 96 682 99 800 112" fill="none" stroke="#111827" strokeWidth="4" strokeLinecap="round" />
-                <circle cx="400" cy="48" r="5" fill="#f59e0b" />
-                <circle cx="548" cy="82" r="5" fill="#f59e0b" />
-                <circle cx="800" cy="112" r="6" fill="#111827" />
-                <text x="374" y="24" fontSize="11" fill="#6b7280">mudança</text>
-                <text x="525" y="66" fontSize="11" fill="#6b7280">persistência</text>
-                <text x="750" y="134" fontSize="11" fill="#111827">agora</text>
-              </svg>
-            </div>
-
-            <div className="mt-4 grid gap-2 sm:grid-cols-3">
-              <Signal label="Sinal" value={changeTypeLabels[episode.change_type]} />
-              <Signal label="Persistência percebida" value={ageBucketLabels[episode.age_bucket]} />
-              <Signal label="Estado de entrada" value={episode.initial_state === "watch" ? "Observando" : episode.initial_state === "investigate" ? "Investigando" : "Ação considerada"} />
-            </div>
-            {note ? <div className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900"><strong>Nota local:</strong> {note}</div> : null}
-          </section>
-
-          <section className="rounded-[18px] border border-gray-200 bg-white p-5 shadow-soft">
-            <div>
-              <h2 className="font-semibold">Ciclo atual</h2>
-              <p className="mt-1 text-xs leading-5 text-gray-500">Mudança, decisão, execução e resposta aparecem como uma única história em andamento.</p>
-            </div>
-
-            <div className="relative ml-2 mt-5 border-l-2 border-gray-200 pl-6">
-              {timeline.map((item) => <TimelineEvent key={item.key} item={item} />)}
-
-              {!episode.closed_at ? (
-                <div className="relative pb-2">
-                  <div className="absolute -left-[31px] top-1 h-3 w-3 rounded-full border-2 border-white bg-gray-300 ring-1 ring-gray-300" />
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Próximo passo</div>
-                  <div className="mt-1 text-sm font-semibold">{nextStepForState(state)}</div>
-
-                  {!intervention ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Button variant="secondary" onClick={keepWatching} disabled={saving}>Continuar observando</Button>
-                      <Button onClick={() => setShowIntervention((v) => !v)} disabled={saving}>Intervir</Button>
-                    </div>
-                  ) : null}
-
-                  {intervention?.execution_state === "planned" ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Button onClick={() => setExecution("executed")} disabled={saving}>Marcar como executada</Button>
-                      <Button variant="danger" onClick={() => setExecution("exception")} disabled={saving}>Registrar exceção</Button>
-                    </div>
-                  ) : null}
-
-                  {intervention?.execution_state === "exception" ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Button onClick={() => setExecution("planned")} disabled={saving}><span className="inline-flex items-center gap-2"><RotateCcw size={14} /> Nova tentativa</span></Button>
-                      <Button variant="secondary" onClick={() => setShowUpdate(true)}>Adicionar contexto</Button>
-                    </div>
-                  ) : null}
-
-                  {intervention?.execution_state === "executed" ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Button onClick={() => setShowReview((v) => !v)} disabled={saving}>Revisar resposta</Button>
-                      <Button variant="secondary" onClick={() => setShowUpdate(true)}>Adicionar atualização</Button>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-
-            {showIntervention && !intervention ? (
-              <InlinePanel title="Registrar intervenção" onClose={() => setShowIntervention(false)}>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="O que vamos fazer?">
-                    <select className={inputClass} value={interventionType} onChange={(e) => setInterventionType(e.target.value as InterventionType)}>
-                      {Object.entries(interventionTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                    </select>
-                  </Field>
-                  <Field label="Owner / papel"><input className={inputClass} value={ownerRole} onChange={(e) => setOwnerRole(e.target.value)} /></Field>
-                </div>
-                <Field label="Objetivo" hint="Texto livre fica somente neste navegador."><input className={inputClass} value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="Entender bloqueio e recuperar engajamento" /></Field>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Prazo de execução"><select className={inputClass} value={deadlineHours} onChange={(e) => setDeadlineHours(Number(e.target.value))}><option value={8}>8 horas</option><option value={24}>24 horas</option><option value={48}>48 horas</option><option value={72}>3 dias</option></select></Field>
-                  <Field label="Revisar em"><select className={inputClass} value={reviewDays} onChange={(e) => setReviewDays(Number(e.target.value))}><option value={3}>3 dias</option><option value={7}>7 dias</option><option value={14}>14 dias</option><option value={30}>30 dias</option></select></Field>
-                </div>
-                <div className="flex gap-2"><Button onClick={saveIntervention} disabled={saving}>{saving ? "Salvando..." : "Registrar intervenção"}</Button><Button variant="secondary" onClick={() => setShowIntervention(false)}>Cancelar</Button></div>
-              </InlinePanel>
-            ) : null}
-
-            {showUpdate ? (
-              <InlinePanel title="Adicionar atualização" onClose={() => setShowUpdate(false)}>
-                <Field label="Tipo de atualização">
-                  <select className={inputClass} value={updateType} onChange={(e) => setUpdateType(e.target.value as EpisodeUpdateType)}>
-                    {Object.entries(episodeUpdateTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                  </select>
-                </Field>
-                <Field label="Contexto" hint="Este texto fica somente no navegador; o backend recebe apenas o tipo estruturado."><textarea className={`${inputClass} min-h-20 resize-y`} value={updateText} onChange={(e) => setUpdateText(e.target.value)} placeholder="Ex.: usuário-chave respondeu e confirmou um bloqueio técnico." /></Field>
-                <div className="flex gap-2"><Button onClick={addUpdate} disabled={saving}>{saving ? "Salvando..." : "Adicionar à timeline"}</Button><Button variant="secondary" onClick={() => setShowUpdate(false)}>Cancelar</Button></div>
-              </InlinePanel>
-            ) : null}
-
-            {showReview && intervention ? (
-              <InlinePanel title="Revisar resposta" onClose={() => setShowReview(false)}>
-                <p className="mb-3 text-xs leading-5 text-gray-500">Não estamos afirmando causalidade. Registre apenas a leitura do estado atual depois da intervenção.</p>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {(Object.entries(outcomeLabels) as [Outcome, string][]).map(([value, label]) => (
-                    <button key={value} type="button" onClick={() => setOutcome(value)} className={`rounded-xl border p-3 text-left text-xs font-semibold transition ${outcome === value ? "border-gray-900 bg-gray-50" : "border-gray-200 bg-white hover:border-gray-400"}`}>{label}</button>
-                  ))}
-                </div>
-                <div className="mt-3">
-                  <Field label="Isso mudou alguma decisão que você teria tomado sem o Ohrly?">
-                    <select className={inputClass} value={impact} onChange={(e) => setImpact(e.target.value as DecisionImpact)}>
-                      {(Object.entries(decisionImpactLabels) as [DecisionImpact, string][]).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                    </select>
-                  </Field>
-                </div>
-                <div className="flex gap-2"><Button onClick={saveReview} disabled={!outcome || saving}>{saving ? "Salvando..." : "Salvar revisão"}</Button><Button variant="secondary" onClick={() => setShowReview(false)}>Cancelar</Button></div>
-              </InlinePanel>
-            ) : null}
-          </section>
+      <nav className="mb-5 overflow-x-auto border-b border-gray-200" aria-label="Seções do episódio">
+        <div className="flex min-w-max gap-6">
+          {episodeTabs.map((tab) => <Link key={tab.id} href={`/episodes/${episode.id}?tab=${tab.id}`} className={`border-b-2 px-1 pb-3 text-sm font-semibold transition ${activeTab === tab.id ? "border-gray-900 text-gray-900" : "border-transparent text-gray-400 hover:text-gray-700"}`}>{tab.label}</Link>)}
         </div>
+      </nav>
 
-        <aside className="xl:sticky xl:top-6">
-          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-soft">
-            <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-gray-400">Estado atual</div>
-            <div className="mt-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-              <StateBadge state={state} />
-              <div className="mt-3 text-lg font-extrabold tracking-[-0.02em]">{nextStepForState(state)}</div>
-              <p className="mt-2 text-xs leading-5 text-gray-500">A interface sempre aponta para a próxima decisão, não para uma próxima página.</p>
+      {activeTab === "current" ? <div className="space-y-4">
+        <section className="rounded-[18px] border border-gray-200 bg-white p-5 shadow-soft">
+          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-gray-400">Estado atual</div>
+              <div className="mt-3 flex flex-wrap items-center gap-3"><StateBadge state={state} />{episode.closed_at ? <span className="text-xs font-semibold text-gray-400">Encerrado em {formatShortDate(episode.closed_at)}</span> : null}</div>
+              <div className="mt-4 text-2xl font-extrabold tracking-[-0.03em]">{nextStepForState(state)}</div>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500">Comece pelo que este ciclo pede agora. Ação, continuidade e histórico ficam disponíveis quando você precisar aprofundar.</p>
             </div>
 
-            <div className="mt-3 space-y-2">
+            <div className="grid w-full gap-2 sm:grid-cols-2 lg:w-[360px] lg:grid-cols-2">
               {accountData ? <Info label="Conta" value={accountData.name} /> : null}
-              <Info label="Episódio" value={alias} />
               <Info label="Sinal" value={changeTypeLabels[episode.change_type]} />
               <Info label="Persistência" value={ageBucketLabels[episode.age_bucket]} />
-              <Info label="Intervenção" value={intervention ? interventionTypeLabels[intervention.intervention_type] : "Ainda não registrada"} />
-              {intervention ? <Info label="Execution Reality" value={intervention.execution_state.toUpperCase()} /> : null}
-              {latestReview ? <Info label="Última revisão" value={outcomeLabels[latestReview.outcome]} /> : null}
+              {latestReview ? <Info label="Última revisão" value={outcomeLabels[latestReview.outcome]} /> : <Info label="Última revisão" value="Ainda não realizada" />}
             </div>
-
-            {!episode.closed_at ? <Button className="mt-4 w-full" onClick={primaryAction} disabled={saving}>{PrimaryActionLabel(state, Boolean(intervention))}</Button> : null}
-            {canClose ? <Button variant="secondary" className="mt-2 w-full" onClick={closeCycle} disabled={saving}>Fechar ciclo</Button> : null}
-            {episode.closed_at ? <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-xs font-semibold text-emerald-800"><Check size={15} /> Ciclo encerrado e preservado.</div> : null}
           </div>
-        </aside>
-      </div>
+          {!episode.closed_at ? 
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button onClick={primaryAction} disabled={saving}>
+                    {PrimaryActionLabel(state, Boolean(intervention))}
+                  </Button>
+                  
+                  {!intervention ? 
+                    <Button variant="secondary" onClick={keepWatching} disabled={saving}>
+                      Continuar observando
+                    </Button> 
+                    : 
+                    null
+                  }
+                  
+                  {canClose ? 
+                    <Button variant="secondary" onClick={closeCycle} disabled={saving}>
+                      Fechar ciclo
+                    </Button> 
+                    : 
+                    null
+                  }
+                </div> 
+                : 
+                <div className="mt-4 flex flex-wrap gap-2 justify-between">
+                  <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+                    <Check size={15} /> 
+                    Ciclo encerrado e preservado
+                  </div>
+
+                  {episode.account_id ? 
+                    <Link href={`/episodes/new?accountId=${episode.account_id}&relatedTo=${episode.id}`} className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">
+                      <Plus size={15} /> 
+                      Algo relacionado aconteceu
+                    </Link> 
+                    : 
+                    null
+                  }
+                </div>
+              }
+        </section>
+
+        {incomingRelationship && previousEpisode ? <section className="rounded-[18px] border border-indigo-100 bg-indigo-50/40 p-5">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <div className="flex flex-wrap items-center gap-2"><GitBranch size={14} className="text-indigo-600" /><span className="text-xs font-bold text-indigo-800">{episodeRelationshipTypeLabels[incomingRelationship.relationship_type]} de um ciclo anterior</span><span className="text-[11px] font-semibold text-indigo-500">· {elapsedLabel(previousEpisode.closed_at ?? previousEpisode.created_at, episode.created_at)}</span></div>
+              <div className="mt-2 text-sm font-semibold text-gray-900">{getEpisodeAlias(previousEpisode.id)}</div>
+              <div className="mt-1 text-xs text-gray-500">{changeTypeLabels[previousEpisode.change_type]} · {previousEpisode.closed_at ? `fechado em ${formatShortDate(previousEpisode.closed_at)}` : "ainda aberto"}</div>
+            </div>
+            <Link href={`/episodes/${episode.id}?tab=continuity`} className="text-xs font-semibold text-indigo-700 hover:underline">Ver continuidade →</Link>
+          </div>
+        </section> : outgoingRelationships.length ? <section className="rounded-[18px] border border-gray-200 bg-white p-4 shadow-soft"><div className="flex items-center justify-between gap-3"><div><div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-gray-400">Continuidade</div><div className="mt-1 text-sm font-semibold">Este ciclo tem {outgoingRelationships.length} continuidade(s) registrada(s)</div></div><Link href={`/episodes/${episode.id}?tab=continuity`} className="text-xs font-semibold text-indigo-700 hover:underline">Ver →</Link></div></section> : null}
+
+        <section className="rounded-[18px] border border-gray-200 bg-white p-5 shadow-soft">
+          <div>
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-gray-400">Leitura do ciclo</div>
+            <h2 className="mt-1 font-semibold">Como este episódio chegou ao estado atual</h2>
+            <p className="mt-1 text-xs leading-5 text-gray-500">Uma leitura compacta da mudança percebida. A sequência detalhada fica em Histórico.</p>
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-b from-white to-gray-50 p-4">
+            <svg viewBox="0 0 800 145" className="h-40 w-full" preserveAspectRatio="none" aria-label="Trajetória ilustrativa do episódio">
+              <line x1="0" y1="42" x2="800" y2="42" stroke="#d1d5db" strokeWidth="2" strokeDasharray="6 6" />
+              <path d="M0 43 C90 39 150 45 220 41 C300 36 350 42 400 48 C455 55 500 72 548 82 C610 96 682 99 800 112" fill="none" stroke="#111827" strokeWidth="4" strokeLinecap="round" />
+              <circle cx="400" cy="48" r="5" fill="#f59e0b" />
+              <circle cx="548" cy="82" r="5" fill="#f59e0b" />
+              <circle cx="800" cy="112" r="6" fill="#111827" />
+              <text x="374" y="24" fontSize="11" fill="#6b7280">mudança</text>
+              <text x="525" y="66" fontSize="11" fill="#6b7280">persistência</text>
+              <text x="750" y="134" fontSize="11" fill="#111827">agora</text>
+            </svg>
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <Signal label="Sinal" value={changeTypeLabels[episode.change_type]} />
+            <Signal label="Persistência percebida" value={ageBucketLabels[episode.age_bucket]} />
+            <Signal label="Estado de entrada" value={episode.initial_state === "watch" ? "Observando" : episode.initial_state === "investigate" ? "Investigando" : "Ação considerada"} />
+          </div>
+          {note ? <div className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900"><strong>Nota local:</strong> {note}</div> : null}
+        </section>
+      </div> : null}
+
+      {activeTab === "action" ? <div className="space-y-4">
+        <section className="rounded-[18px] border border-gray-200 bg-white p-5 shadow-soft">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+            <div>
+              <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-gray-400">Ação</div>
+              <h2 className="mt-1 font-semibold">Decisão, intervenção e resposta</h2>
+              <p className="mt-1 max-w-3xl text-xs leading-5 text-gray-500">Aqui ficam as ações do ciclo. Exposição não é execução; execução não é outcome.</p>
+            </div>
+            {!episode.closed_at ? <StateBadge state={state} /> : null}
+          </div>
+
+          {!intervention ? <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+            <div className="text-sm font-semibold">Nenhuma intervenção registrada</div>
+            <p className="mt-1 text-xs leading-5 text-gray-500">Continue observando enquanto ainda não houver evidência suficiente ou registre uma ação quando este ciclo pedir intervenção.</p>
+            {!episode.closed_at ? <div className="mt-3 flex flex-wrap gap-2"><Button variant="secondary" onClick={keepWatching} disabled={saving}>Continuar observando</Button><Button onClick={() => setShowIntervention((value) => !value)} disabled={saving}>Intervir</Button><Button variant="secondary" onClick={() => setShowUpdate(true)}>Adicionar atualização</Button></div> : null}
+          </div> : <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <div className="rounded-2xl border border-gray-200 p-4">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Intervenção</div>
+              <div className="mt-2 text-sm font-semibold">{interventionTypeLabels[intervention.intervention_type]}</div>
+              {getInterventionObjective(intervention.id) ? <p className="mt-2 text-xs leading-5 text-gray-500">{getInterventionObjective(intervention.id)}</p> : null}
+              <div className="mt-3 grid gap-2 sm:grid-cols-2"><Info label="Owner" value={intervention.owner_role} /><Info label="Execução" value={intervention.execution_state.toUpperCase()} /></div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 p-4">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Resposta observada</div>
+              {latestReview ? <><div className="mt-2 text-sm font-semibold">{outcomeLabels[latestReview.outcome]}</div><div className="mt-2 text-xs text-gray-500">Impacto percebido na decisão: <span className="font-semibold text-gray-700">{decisionImpactLabels[latestReview.decision_impact]}</span></div></> : <div className="mt-2 text-sm font-semibold text-gray-500">Ainda sem revisão</div>}
+            </div>
+          </div>}
+
+          {intervention?.execution_state === "planned" && !episode.closed_at ? <div className="mt-3 flex flex-wrap gap-2"><Button onClick={() => setExecution("executed")} disabled={saving}>Marcar como executada</Button><Button variant="danger" onClick={() => setExecution("exception")} disabled={saving}>Registrar exceção</Button><Button variant="secondary" onClick={() => setShowUpdate(true)}>Adicionar atualização</Button></div> : null}
+          {intervention?.execution_state === "exception" && !episode.closed_at ? <div className="mt-3 flex flex-wrap gap-2"><Button onClick={() => setExecution("planned")} disabled={saving}><span className="inline-flex items-center gap-2"><RotateCcw size={14} /> Nova tentativa</span></Button><Button variant="secondary" onClick={() => setShowUpdate(true)}>Adicionar contexto</Button></div> : null}
+          {intervention?.execution_state === "executed" && !episode.closed_at ? <div className="mt-3 flex flex-wrap gap-2"><Button onClick={() => setShowReview((value) => !value)} disabled={saving}>Revisar resposta</Button><Button variant="secondary" onClick={() => setShowUpdate(true)}>Adicionar atualização</Button>{canClose ? <Button variant="secondary" onClick={closeCycle} disabled={saving}>Fechar ciclo</Button> : null}</div> : null}
+
+          {showIntervention && !intervention ? (
+            <InlinePanel title="Registrar intervenção" onClose={() => setShowIntervention(false)}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="O que vamos fazer?">
+                  <select className={inputClass} value={interventionType} onChange={(e) => setInterventionType(e.target.value as InterventionType)}>
+                    {Object.entries(interventionTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </Field>
+                <Field label="Owner / papel"><input className={inputClass} value={ownerRole} onChange={(e) => setOwnerRole(e.target.value)} /></Field>
+              </div>
+              <Field label="Objetivo" hint="Texto livre fica somente neste navegador."><input className={inputClass} value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="Entender bloqueio e recuperar engajamento" /></Field>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Prazo de execução"><select className={inputClass} value={deadlineHours} onChange={(e) => setDeadlineHours(Number(e.target.value))}><option value={8}>8 horas</option><option value={24}>24 horas</option><option value={48}>48 horas</option><option value={72}>3 dias</option></select></Field>
+                <Field label="Revisar em"><select className={inputClass} value={reviewDays} onChange={(e) => setReviewDays(Number(e.target.value))}><option value={3}>3 dias</option><option value={7}>7 dias</option><option value={14}>14 dias</option><option value={30}>30 dias</option></select></Field>
+              </div>
+              <div className="flex gap-2"><Button onClick={saveIntervention} disabled={saving}>{saving ? "Salvando..." : "Registrar intervenção"}</Button><Button variant="secondary" onClick={() => setShowIntervention(false)}>Cancelar</Button></div>
+            </InlinePanel>
+          ) : null}
+
+          {showUpdate ? (
+            <InlinePanel title="Adicionar atualização" onClose={() => setShowUpdate(false)}>
+              <Field label="Tipo de atualização">
+                <select className={inputClass} value={updateType} onChange={(e) => setUpdateType(e.target.value as EpisodeUpdateType)}>
+                  {Object.entries(episodeUpdateTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </Field>
+              <Field label="Contexto" hint="Este texto fica somente no navegador; o backend recebe apenas o tipo estruturado."><textarea className={`${inputClass} min-h-20 resize-y`} value={updateText} onChange={(e) => setUpdateText(e.target.value)} placeholder="Ex.: usuário-chave respondeu e confirmou um bloqueio técnico." /></Field>
+              <div className="flex gap-2"><Button onClick={addUpdate} disabled={saving}>{saving ? "Salvando..." : "Adicionar à timeline"}</Button><Button variant="secondary" onClick={() => setShowUpdate(false)}>Cancelar</Button></div>
+            </InlinePanel>
+          ) : null}
+
+          {showReview && intervention ? (
+            <InlinePanel title="Revisar resposta" onClose={() => setShowReview(false)}>
+              <p className="mb-3 text-xs leading-5 text-gray-500">Não estamos afirmando causalidade. Registre apenas a leitura do estado atual depois da intervenção.</p>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {(Object.entries(outcomeLabels) as [Outcome, string][]).map(([value, label]) => (
+                  <button key={value} type="button" onClick={() => setOutcome(value)} className={`rounded-xl border p-3 text-left text-xs font-semibold transition ${outcome === value ? "border-gray-900 bg-gray-50" : "border-gray-200 bg-white hover:border-gray-400"}`}>{label}</button>
+                ))}
+              </div>
+              <div className="mt-3">
+                <Field label="Isso mudou alguma decisão que você teria tomado sem o Ohrly?">
+                  <select className={inputClass} value={impact} onChange={(e) => setImpact(e.target.value as DecisionImpact)}>
+                    {(Object.entries(decisionImpactLabels) as [DecisionImpact, string][]).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </Field>
+              </div>
+              <div className="flex gap-2"><Button onClick={saveReview} disabled={!outcome || saving}>{saving ? "Salvando..." : "Salvar revisão"}</Button><Button variant="secondary" onClick={() => setShowReview(false)}>Cancelar</Button></div>
+            </InlinePanel>
+          ) : null}
+        </section>
+      </div> : null}
+
+      {activeTab === "continuity" ? <section className="rounded-[18px] border border-gray-200 bg-white p-5 shadow-soft">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+          <div>
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-gray-400">Continuidade</div>
+            <h2 className="mt-1 font-semibold">Este ciclo dentro da história da conta</h2>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-gray-500">O episódio preserva o que foi decidido neste ciclo. Relações mostram o que continuou, voltou ou ganhou contexto depois.</p>
+          </div>
+          {episode.closed_at && episode.account_id ? <Link href={`/episodes/new?accountId=${episode.account_id}&relatedTo=${episode.id}`} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"><Plus size={15} /> Algo relacionado aconteceu</Link> : null}
+        </div>
+
+        {incomingRelationship && previousEpisode ? <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
+          <div className="flex flex-wrap items-center gap-2"><GitBranch size={14} className="text-indigo-600" /><span className="text-xs font-bold text-indigo-800">{episodeRelationshipTypeLabels[incomingRelationship.relationship_type]} do ciclo anterior</span><span className="text-[11px] font-semibold text-indigo-500">· {elapsedLabel(previousEpisode.closed_at ?? previousEpisode.created_at, episode.created_at)}</span></div>
+          <Link href={`/episodes/${previousEpisode.id}`} onClick={() => trackEvent("continuity_context_viewed", episode.id, null, { source_episode_id: previousEpisode.id })} className="mt-3 block rounded-xl border border-indigo-100 bg-white p-3 transition hover:border-indigo-300">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Ciclo anterior</div>
+            <div className="mt-1 text-sm font-semibold text-gray-900">{getEpisodeAlias(previousEpisode.id)}</div>
+            <div className="mt-1 text-[11px] text-gray-500">{changeTypeLabels[previousEpisode.change_type]} · {previousEpisode.closed_at ? `fechado em ${formatShortDate(previousEpisode.closed_at)}` : "ainda aberto"}</div>
+          </Link>
+        </div> : null}
+
+        {outgoingRelationships.length ? <div className="mt-4">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">O que veio depois deste ciclo</div>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">{outgoingRelationships.map((relationship) => {
+            const target = relatedEpisodes.find((candidate) => candidate.id === relationship.target_episode_id);
+            if (!target) return null;
+            return <Link key={relationship.id} href={`/episodes/${target.id}`} className="rounded-xl border border-gray-200 bg-gray-50 p-3 transition hover:border-gray-300">
+              <div className="text-[11px] font-bold text-indigo-700">{episodeRelationshipTypeLabels[relationship.relationship_type]} · {elapsedLabel(episode.closed_at ?? episode.created_at, target.created_at)}</div>
+              <div className="mt-1 text-sm font-semibold text-gray-900">{getEpisodeAlias(target.id)}</div>
+              <div className="mt-1 text-[11px] text-gray-500">{changeTypeLabels[target.change_type]}</div>
+            </Link>;
+          })}</div>
+        </div> : null}
+
+        {!incomingRelationship && outgoingRelationships.length === 0 ? <div className="mt-5 rounded-2xl bg-gray-50 p-5"><div className="text-sm font-semibold">Este ciclo ainda não possui vínculos</div><div className="mt-1 text-xs leading-5 text-gray-500">Se algo voltar ou um novo caso precisar deste contexto, crie outro episódio relacionado em vez de reescrever esta história.</div></div> : null}
+      </section> : null}
+
+      {activeTab === "history" ? <section className="rounded-[18px] border border-gray-200 bg-white p-5 shadow-soft">
+        <div>
+          <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-gray-400">Histórico</div>
+          <h2 className="mt-1 font-semibold">História deste ciclo</h2>
+          <p className="mt-1 text-xs leading-5 text-gray-500">Mudança, atualizações, intervenção, execução e resposta ficam aqui quando você precisa reconstruir como a decisão evoluiu.</p>
+        </div>
+
+        <div className="relative ml-2 mt-5 border-l-2 border-gray-200 pl-6">
+          {timeline.map((item) => <TimelineEvent key={item.key} item={item} />)}
+          {episode.closed_at ? <div className="relative pb-2"><div className="absolute -left-[31px] top-1 h-3 w-3 rounded-full border-2 border-white bg-emerald-600 ring-1 ring-gray-300" /><div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{formatShortDate(episode.closed_at)}</div><div className="mt-1 text-sm font-semibold">Ciclo encerrado</div><div className="mt-1 text-xs text-gray-500">A história deste episódio permanece preservada mesmo que outro ciclo seja relacionado depois.</div></div> : <div className="relative pb-2"><div className="absolute -left-[31px] top-1 h-3 w-3 rounded-full border-2 border-white bg-gray-300 ring-1 ring-gray-300" /><div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Próximo passo</div><div className="mt-1 text-sm font-semibold">{nextStepForState(state)}</div></div>}
+        </div>
+      </section> : null}
     </AppShell>
   );
+}
+
+function elapsedLabel(from: string, to: string) {
+  const diff = Math.max(0, new Date(to).getTime() - new Date(from).getTime());
+  const days = Math.floor(diff / 86_400_000);
+  if (days === 0) return "no mesmo dia";
+  if (days === 1) return "1 dia depois";
+  return `${days} dias depois`;
+}
+
+function formatShortDate(value: string) {
+  return new Date(value).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function Signal({ label, value }: { label: string; value: string }) {

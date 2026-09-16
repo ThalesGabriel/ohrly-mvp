@@ -7,6 +7,8 @@ import type {
   ChangeType,
   DecisionImpact,
   Episode,
+  EpisodeRelationship,
+  EpisodeRelationshipType,
   EpisodeUpdate,
   EpisodeUpdateType,
   ExecutionState,
@@ -23,6 +25,7 @@ const LOCAL_USER_ID = "local-demo-user";
 type LocalDb = {
   accounts: Account[];
   episodes: Episode[];
+  relationships: EpisodeRelationship[];
   interventions: Intervention[];
   reviews: Review[];
   updates: EpisodeUpdate[];
@@ -30,7 +33,7 @@ type LocalDb = {
 };
 
 function emptyDb(): LocalDb {
-  return { accounts: [], episodes: [], interventions: [], reviews: [], updates: [], telemetry: [] };
+  return { accounts: [], episodes: [], relationships: [], interventions: [], reviews: [], updates: [], telemetry: [] };
 }
 
 function localDb(): LocalDb {
@@ -42,6 +45,7 @@ function localDb(): LocalDb {
     return {
       accounts: parsed.accounts ?? [],
       episodes: parsed.episodes ?? [],
+      relationships: parsed.relationships ?? [],
       interventions: parsed.interventions ?? [],
       reviews: parsed.reviews ?? [],
       updates: parsed.updates ?? [],
@@ -162,6 +166,67 @@ export async function createEpisode(input: {
   if (error) throw error;
   await trackEvent("episode_created", data.id, null, input);
   return data as Episode;
+}
+
+export async function listEpisodeRelationships(): Promise<EpisodeRelationship[]> {
+  if (!isSupabaseConfigured()) {
+    return localDb().relationships.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+  await getUserId();
+  const supabase = getSupabase()!;
+  const { data, error } = await supabase.from("episode_relationships").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as EpisodeRelationship[];
+}
+
+export async function createEpisodeRelationship(input: {
+  source_episode_id: string;
+  target_episode_id: string;
+  relationship_type: EpisodeRelationshipType;
+}): Promise<EpisodeRelationship> {
+  const userId = await getUserId();
+
+  if (input.source_episode_id === input.target_episode_id) {
+    throw new Error("Um episódio não pode ser relacionado a ele mesmo.");
+  }
+
+  if (!isSupabaseConfigured()) {
+    const db = localDb();
+    const source = db.episodes.find((episode) => episode.id === input.source_episode_id);
+    const target = db.episodes.find((episode) => episode.id === input.target_episode_id);
+    if (!source || !target) throw new Error("Episódio de continuidade não encontrado.");
+    if (!source.account_id || source.account_id !== target.account_id) {
+      throw new Error("A continuidade só pode relacionar episódios da mesma conta.");
+    }
+    const duplicate = db.relationships.find((relationship) =>
+      relationship.source_episode_id === input.source_episode_id
+      && relationship.target_episode_id === input.target_episode_id
+    );
+    if (duplicate) return duplicate;
+
+    const relationship: EpisodeRelationship = {
+      id: uid(),
+      user_id: userId,
+      ...input,
+      created_at: new Date().toISOString(),
+    };
+    db.relationships.push(relationship);
+    saveLocal(db);
+    await trackEvent("episode_relationship_created", input.target_episode_id, null, {
+      source_episode_id: input.source_episode_id,
+      relationship_type: input.relationship_type,
+    });
+    return relationship;
+  }
+
+  const supabase = getSupabase()!;
+  const { data, error } = await supabase.from("episode_relationships").insert({ user_id: userId, ...input }).select("*").single();
+  if (error) throw error;
+  await trackEvent("episode_relationship_created", input.target_episode_id, null, {
+    source_episode_id: input.source_episode_id,
+    relationship_type: input.relationship_type,
+  });
+  return data as EpisodeRelationship;
 }
 
 export async function updateEpisodeAccount(id: string, accountId: string): Promise<Episode> {

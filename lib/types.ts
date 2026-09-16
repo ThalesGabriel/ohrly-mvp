@@ -45,6 +45,8 @@ export type EpisodeUpdateType =
   | "exception"
   | "note";
 
+export type EpisodeRelationshipType = "continuation" | "recurrence" | "related";
+
 export interface Account {
   id: string;
   user_id: string;
@@ -60,6 +62,15 @@ export interface Episode {
   initial_state: InitialState;
   created_at: string;
   closed_at: string | null;
+}
+
+export interface EpisodeRelationship {
+  id: string;
+  user_id: string;
+  source_episode_id: string;
+  target_episode_id: string;
+  relationship_type: EpisodeRelationshipType;
+  created_at: string;
 }
 
 export interface Intervention {
@@ -151,4 +162,16 @@ export const episodeUpdateTypeLabels: Record<EpisodeUpdateType, string> = {
   new_signal: "Novo sinal observado",
   exception: "Exceção",
   note: "Nota",
+};
+
+export const episodeRelationshipTypeLabels: Record<EpisodeRelationshipType, string> = {
+  continuation: "Continuação",
+  recurrence: "Recorrência",
+  related: "Relacionado",
+};
+
+export const episodeRelationshipQuestionLabels: Record<EpisodeRelationshipType, string> = {
+  continuation: "O caso anterior não estava realmente encerrado",
+  recurrence: "O problema havia sido resolvido e voltou",
+  related: "É uma situação diferente, mas o histórico anterior é relevante",
 };

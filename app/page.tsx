@@ -177,51 +177,25 @@ export default function HomePage() {
             Filtre a fila por tipo ou estado e entre direto no episódio que exige uma decisão.
           </p>
         </div>
-        <Link
-          href="/episodes/new"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
-        >
-          <Plus size={16} /> Registrar episódio
-        </Link>
       </div>
 
-      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricButton
-          icon={<Clock3 size={17} />}
-          value={metrics.review}
-          label="revisar hoje"
-          active={quickView === "review"}
-          onClick={() => setQuickView(quickView === "review" ? "all" : "review")}
-        />
-        <MetricButton
-          icon={<Eye size={17} />}
-          value={metrics.action}
-          label="precisam de ação"
-          active={quickView === "needs_me"}
-          onClick={() => setQuickView("needs_me")}
-        />
-        <MetricButton
-          icon={<AlertTriangle size={17} />}
-          value={metrics.exceptions}
-          label="exceções"
-          active={quickView === "exceptions"}
-          onClick={() => setQuickView(quickView === "exceptions" ? "all" : "exceptions")}
-        />
-        <MetricButton
-          icon={<CheckCircle2 size={17} />}
-          value={metrics.observing}
-          label="em acompanhamento"
-          active={quickView === "recovering"}
-          onClick={() => setQuickView(quickView === "recovering" ? "all" : "recovering")}
-        />
-      </div>
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-1 items-center">
+        <div className="flex-1">
+          <QuickViewButton active={quickView === "all"} onClick={() => setQuickView("all")}>Todos</QuickViewButton>
+          <QuickViewButton active={quickView === "needs_me"} onClick={() => setQuickView("needs_me")}>Precisa de mim</QuickViewButton>
+          <QuickViewButton active={quickView === "review"} onClick={() => setQuickView("review")}>Revisar hoje</QuickViewButton>
+          <QuickViewButton active={quickView === "recovering"} onClick={() => setQuickView("recovering")}>Em acompanhamento</QuickViewButton>
+          <QuickViewButton active={quickView === "exceptions"} onClick={() => setQuickView("exceptions")}>Exceções</QuickViewButton>
+        </div>
+        <div className="">
+          <Link
+            href="/episodes/new"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
+          >
+            <Plus size={16} /> Registrar episódio
+          </Link>
+        </div>
 
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
-        <QuickViewButton active={quickView === "all"} onClick={() => setQuickView("all")}>Todos</QuickViewButton>
-        <QuickViewButton active={quickView === "needs_me"} onClick={() => setQuickView("needs_me")}>Precisa de mim</QuickViewButton>
-        <QuickViewButton active={quickView === "review"} onClick={() => setQuickView("review")}>Revisar hoje</QuickViewButton>
-        <QuickViewButton active={quickView === "recovering"} onClick={() => setQuickView("recovering")}>Em acompanhamento</QuickViewButton>
-        <QuickViewButton active={quickView === "exceptions"} onClick={() => setQuickView("exceptions")}>Exceções</QuickViewButton>
       </div>
 
       <div className="mb-4 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
