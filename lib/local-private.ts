@@ -6,11 +6,21 @@ export type PrivateEpisodeUpdate = {
   text: string;
 };
 
+export type PrivateAccountData = {
+  externalId: string;
+  name: string;
+  owner?: string;
+  attributes: Record<string, string>;
+  source?: string;
+  importedAt?: string;
+};
+
 type PrivateStore = {
   episodeAliases: Record<string, string>;
   episodeNotes: Record<string, string>;
   interventionObjectives: Record<string, string>;
   updateTexts: Record<string, string>;
+  accountData: Record<string, PrivateAccountData>;
 };
 
 const empty: PrivateStore = {
@@ -18,6 +28,7 @@ const empty: PrivateStore = {
   episodeNotes: {},
   interventionObjectives: {},
   updateTexts: {},
+  accountData: {},
 };
 
 function currentScope() {
@@ -99,4 +110,32 @@ export function setEpisodeUpdateText(id: string, value: string) {
 
 export function getEpisodeUpdateText(id: string) {
   return load().updateTexts[id] || "";
+}
+
+
+export function setAccountPrivateData(id: string, value: PrivateAccountData) {
+  const store = load();
+  store.accountData[id] = {
+    ...value,
+    externalId: value.externalId.trim(),
+    name: value.name.trim(),
+    owner: value.owner?.trim() || undefined,
+  };
+  save(store);
+}
+
+export function getAccountPrivateData(id: string): PrivateAccountData {
+  const value = load().accountData[id];
+  return value || { externalId: "", name: `Conta ${id.slice(0, 6).toUpperCase()}`, attributes: {} };
+}
+
+export function findAccountIdByExternalId(externalId: string) {
+  const needle = externalId.trim();
+  if (!needle) return null;
+  const entries = Object.entries(load().accountData);
+  return entries.find(([, value]) => value.externalId === needle)?.[0] ?? null;
+}
+
+export function getAllAccountPrivateData(): Record<string, PrivateAccountData> {
+  return load().accountData;
 }

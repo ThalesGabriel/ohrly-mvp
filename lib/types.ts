@@ -45,9 +45,16 @@ export type EpisodeUpdateType =
   | "exception"
   | "note";
 
+export interface Account {
+  id: string;
+  user_id: string;
+  created_at: string;
+}
+
 export interface Episode {
   id: string;
   user_id: string;
+  account_id: string | null;
   change_type: ChangeType;
   age_bucket: AgeBucket;
   initial_state: InitialState;

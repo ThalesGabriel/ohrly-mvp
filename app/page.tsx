@@ -32,7 +32,7 @@ import {
   reviewDueAt,
   type DisplayState,
 } from "@/lib/display";
-import { getEpisodeAlias } from "@/lib/local-private";
+import { getAllAccountPrivateData, getEpisodeAlias } from "@/lib/local-private";
 import { getInterventionForEpisode, listEpisodes, listReviewsForIntervention } from "@/lib/repository";
 import {
   CHANGE_TYPES,
@@ -52,6 +52,7 @@ type Row = {
   latestReview: Review | null;
   state: DisplayState;
   alias: string;
+  accountName: string;
 };
 
 type QuickView = "needs_me" | "all" | "review" | "recovering" | "exceptions";
@@ -93,6 +94,7 @@ export default function HomePage() {
       setLoading(true);
       setError("");
       const episodes = await listEpisodes();
+      const accountData = getAllAccountPrivateData();
       const enriched = await Promise.all(
         episodes.map(async (episode) => {
           const intervention = await getInterventionForEpisode(episode.id);
@@ -104,6 +106,7 @@ export default function HomePage() {
             latestReview,
             state: deriveDisplayState(episode, intervention, latestReview),
             alias: getEpisodeAlias(episode.id),
+            accountName: episode.account_id ? (accountData[episode.account_id]?.name || `Conta ${episode.account_id.slice(0, 6).toUpperCase()}`) : "Conta não vinculada",
           };
         }),
       );
@@ -137,7 +140,7 @@ export default function HomePage() {
       if (typeFilter !== "all" && row.episode.change_type !== typeFilter) return false;
       if (stateFilter !== "all" && row.state !== stateFilter) return false;
       if (normalizedQuery) {
-        const haystack = `${row.alias} ${changeTypeLabels[row.episode.change_type]} ${displayStateLabels[row.state]}`.toLocaleLowerCase("pt-BR");
+        const haystack = `${row.accountName} ${row.alias} ${changeTypeLabels[row.episode.change_type]} ${displayStateLabels[row.state]}`.toLocaleLowerCase("pt-BR");
         if (!haystack.includes(normalizedQuery)) return false;
       }
       return true;
@@ -229,7 +232,7 @@ export default function HomePage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar por alias..."
+              placeholder="Buscar por conta ou episódio..."
               className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-gray-400"
             />
           </label>
@@ -377,7 +380,7 @@ function SelectFilter({ icon, value, onChange, children, ariaLabel }: { icon: Re
 }
 
 function EpisodeTableRow({ row }: { row: Row }) {
-  const { episode, intervention, latestReview, state, alias } = row;
+  const { episode, intervention, latestReview, state, alias, accountName } = row;
   const lastAction = describeLastAction(intervention, latestReview);
   const timing = describeTiming(row);
 
@@ -385,8 +388,8 @@ function EpisodeTableRow({ row }: { row: Row }) {
     <tr className="group relative transition hover:bg-gray-50/80">
       <td className="p-0">
         <Link href={`/episodes/${episode.id}`} className="block px-4 py-4">
-          <div className="font-semibold text-gray-900 group-hover:underline group-hover:underline-offset-2">{alias}</div>
-          <div className="mt-1 max-w-[250px] truncate text-[11px] text-gray-400">Episódio #{episode.id.slice(0, 8)}</div>
+          <div className="font-semibold text-gray-900 group-hover:underline group-hover:underline-offset-2">{accountName}</div>
+          <div className="mt-1 max-w-[250px] truncate text-[11px] text-gray-500">{alias}</div>
         </Link>
       </td>
       <td className="p-0"><Link href={`/episodes/${episode.id}`} className="block px-4 py-4 text-xs text-gray-600">{changeTypeLabels[episode.change_type]}</Link></td>

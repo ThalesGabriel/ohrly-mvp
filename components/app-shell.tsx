@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { Activity, ListTodo, LogOut, Plus, ShieldCheck, UserRound } from "lucide-react";
+import { Activity, Building2, ListTodo, LogOut, Plus, ShieldCheck, UserRound } from "lucide-react";
 import { repositoryMode } from "@/lib/repository";
 import { useAuth } from "@/components/auth-provider";
 
@@ -30,15 +30,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-[#f7f8fa] lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
       <aside className="bg-gray-900 px-5 py-6 text-white lg:sticky lg:top-0 lg:h-screen">
         <div className="text-[22px] font-extrabold tracking-[-0.04em]">ohrly</div>
-        <div className="mt-1 text-xs text-gray-400">Field MVP · Episode Workspace</div>
+        <div className="mt-1 text-xs text-gray-400">MVP v0.1 · Accounts + Episodes</div>
 
         <nav className="mt-8 flex gap-2 overflow-x-auto lg:flex-col">
           <NavLink href="/" active={pathname === "/"} icon={<ListTodo size={16} />}>Fila de trabalho</NavLink>
+          <NavLink href="/accounts" active={pathname.startsWith("/accounts")} icon={<Building2 size={16} />}>Contas</NavLink>
           <NavLink href="/episodes/new" active={pathname === "/episodes/new"} icon={<Plus size={16} />}>Registrar episódio</NavLink>
         </nav>
 
         <div className="mt-5 rounded-xl border border-gray-700 p-3 text-[11px] leading-5 text-gray-400 lg:absolute lg:bottom-[148px] lg:left-5 lg:right-5 lg:mt-0">
-          <strong className="text-gray-200">Princípio do V0</strong><br />A conta é contexto. O episódio é o objeto de trabalho. O ciclo inteiro acontece numa timeline viva.
+          <strong className="text-gray-200">Princípio da v0.1</strong><br />A conta preserva contexto. O episódio continua sendo o objeto de trabalho criado pelo CSM.
         </div>
 
         {!isLocalMode && user ? (

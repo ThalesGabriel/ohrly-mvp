@@ -11,6 +11,8 @@ import { LoadingBlock } from "@/components/loading";
 import { StateBadge } from "@/components/state-badge";
 import { deriveDisplayState, nextStepForState } from "@/lib/display";
 import {
+  getAccountPrivateData,
+  getAllAccountPrivateData,
   getEpisodeAlias,
   getEpisodeNote,
   getEpisodeUpdateText,
@@ -25,9 +27,11 @@ import {
   createReview,
   getEpisode,
   getInterventionForEpisode,
+  listAccounts,
   listEpisodeUpdates,
   listReviewsForIntervention,
   trackEvent,
+  updateEpisodeAccount,
   updateEpisodeDecision,
   updateExecutionState,
 } from "@/lib/repository";
@@ -38,6 +42,7 @@ import {
   episodeUpdateTypeLabels,
   interventionTypeLabels,
   outcomeLabels,
+  type Account,
   type DecisionImpact,
   type Episode,
   type EpisodeUpdate,
@@ -64,6 +69,8 @@ export default function EpisodeWorkspacePage() {
   const [intervention, setIntervention] = useState<Intervention | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [updates, setUpdates] = useState<EpisodeUpdate[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [legacyAccountId, setLegacyAccountId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -90,6 +97,8 @@ export default function EpisodeWorkspacePage() {
       const ep = await getEpisode(id);
       setEpisode(ep);
       if (!ep) return;
+      if (!ep.account_id) setAccounts(await listAccounts());
+      else setAccounts([]);
       const int = await getInterventionForEpisode(id);
       setIntervention(int);
       setUpdates(await listEpisodeUpdates(id));
@@ -183,6 +192,14 @@ export default function EpisodeWorkspacePage() {
     });
   }
 
+  async function linkAccount() {
+    if (!episode || !legacyAccountId) return;
+    await withSaving(async () => {
+      await updateEpisodeAccount(episode.id, legacyAccountId);
+      setLegacyAccountId("");
+    });
+  }
+
   async function keepWatching() {
     if (!episode) return;
     await withSaving(async () => {
@@ -223,6 +240,8 @@ export default function EpisodeWorkspacePage() {
   if (!episode) return <AppShell><ErrorBox message="Episódio não encontrado." /></AppShell>;
 
   const alias = getEpisodeAlias(episode.id);
+  const accountData = episode.account_id ? getAccountPrivateData(episode.account_id) : null;
+  const accountPrivateData = getAllAccountPrivateData();
   const note = getEpisodeNote(episode.id);
   const canClose = Boolean(latestReview && latestReview.outcome !== "too_early" && !episode.closed_at);
 
@@ -230,9 +249,9 @@ export default function EpisodeWorkspacePage() {
     <AppShell>
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-[0.11em] text-gray-400">Episódio ativo · {alias}</div>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-[-0.04em]">{changeTypeLabels[episode.change_type]}</h1>
-          <p className="mt-2 text-sm text-gray-500">Mudança percebida há {ageBucketLabels[episode.age_bucket]} · toda a história fica no mesmo workspace.</p>
+          <div className="text-[10px] font-extrabold uppercase tracking-[0.11em] text-gray-400">{accountData ? <>CONTA · <Link href={`/accounts/${episode.account_id}`} className="hover:text-gray-700 hover:underline">{accountData.name}</Link></> : "CONTA NÃO VINCULADA"}</div>
+          <h1 className="mt-2 text-3xl font-extrabold tracking-[-0.04em]">{alias}</h1>
+          <p className="mt-2 text-sm text-gray-500">{changeTypeLabels[episode.change_type]} · mudança percebida há {ageBucketLabels[episode.age_bucket]} · toda a história fica no mesmo workspace.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href="/" className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-gray-50"><ArrowLeft size={15} /> Voltar à fila</Link>
@@ -241,6 +260,14 @@ export default function EpisodeWorkspacePage() {
       </div>
 
       {error ? <div className="mb-4"><ErrorBox message={error} /></div> : null}
+
+      {!episode.account_id ? (
+        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <div className="text-sm font-semibold text-amber-950">Este é um episódio legado sem conta vinculada.</div>
+          <div className="mt-1 text-xs leading-5 text-amber-800">A v0.1 preserva episódios antigos, mas novos ciclos passam a pertencer a uma conta.</div>
+          {accounts.length ? <div className="mt-3 flex max-w-xl gap-2"><select className={inputClass} value={legacyAccountId} onChange={(e) => setLegacyAccountId(e.target.value)}><option value="">Escolha a conta...</option>{accounts.map((account) => <option key={account.id} value={account.id}>{accountPrivateData[account.id]?.name || `Conta ${account.id.slice(0, 6).toUpperCase()}`}</option>)}</select><Button onClick={linkAccount} disabled={!legacyAccountId || saving}>Vincular</Button></div> : <Link href="/accounts" className="mt-3 inline-flex text-xs font-semibold text-amber-900 underline underline-offset-4">Cadastrar ou importar contas</Link>}
+        </div>
+      ) : null}
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_310px]">
         <div className="space-y-4">
@@ -379,7 +406,9 @@ export default function EpisodeWorkspacePage() {
             </div>
 
             <div className="mt-3 space-y-2">
-              <Info label="Episódio" value={changeTypeLabels[episode.change_type]} />
+              {accountData ? <Info label="Conta" value={accountData.name} /> : null}
+              <Info label="Episódio" value={alias} />
+              <Info label="Sinal" value={changeTypeLabels[episode.change_type]} />
               <Info label="Persistência" value={ageBucketLabels[episode.age_bucket]} />
               <Info label="Intervenção" value={intervention ? interventionTypeLabels[intervention.intervention_type] : "Ainda não registrada"} />
               {intervention ? <Info label="Execution Reality" value={intervention.execution_state.toUpperCase()} /> : null}

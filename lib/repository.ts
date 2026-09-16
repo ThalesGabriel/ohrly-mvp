@@ -2,6 +2,7 @@
 
 import { getAuthenticatedUser, getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import type {
+  Account,
   AgeBucket,
   ChangeType,
   DecisionImpact,
@@ -20,6 +21,7 @@ const LOCAL_KEY = "ohrly:field-mvp:data:v1";
 const LOCAL_USER_ID = "local-demo-user";
 
 type LocalDb = {
+  accounts: Account[];
   episodes: Episode[];
   interventions: Intervention[];
   reviews: Review[];
@@ -28,7 +30,7 @@ type LocalDb = {
 };
 
 function emptyDb(): LocalDb {
-  return { episodes: [], interventions: [], reviews: [], updates: [], telemetry: [] };
+  return { accounts: [], episodes: [], interventions: [], reviews: [], updates: [], telemetry: [] };
 }
 
 function localDb(): LocalDb {
@@ -38,6 +40,7 @@ function localDb(): LocalDb {
     if (!raw) return emptyDb();
     const parsed = JSON.parse(raw) as Partial<LocalDb>;
     return {
+      accounts: parsed.accounts ?? [],
       episodes: parsed.episodes ?? [],
       interventions: parsed.interventions ?? [],
       reviews: parsed.reviews ?? [],
@@ -68,6 +71,54 @@ async function getUserId() {
   return user.id;
 }
 
+
+export async function listAccounts(): Promise<Account[]> {
+  if (!isSupabaseConfigured()) {
+    return localDb().accounts.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+  await getUserId();
+  const supabase = getSupabase()!;
+  const { data, error } = await supabase.from("accounts").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Account[];
+}
+
+export async function getAccount(id: string): Promise<Account | null> {
+  if (!isSupabaseConfigured()) return localDb().accounts.find((x) => x.id === id) ?? null;
+  await getUserId();
+  const supabase = getSupabase()!;
+  const { data, error } = await supabase.from("accounts").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data as Account | null;
+}
+
+export async function createAccounts(count: number): Promise<Account[]> {
+  if (count <= 0) return [];
+  const userId = await getUserId();
+
+  if (!isSupabaseConfigured()) {
+    const db = localDb();
+    const now = new Date().toISOString();
+    const accounts = Array.from({ length: count }, () => ({ id: uid(), user_id: userId, created_at: now } satisfies Account));
+    db.accounts.push(...accounts);
+    saveLocal(db);
+    return accounts;
+  }
+
+  const supabase = getSupabase()!;
+  const rows = Array.from({ length: count }, () => ({ user_id: userId }));
+  const { data, error } = await supabase.from("accounts").insert(rows).select("*");
+  if (error) throw error;
+  return (data ?? []) as Account[];
+}
+
+export async function createAccount(): Promise<Account> {
+  const [account] = await createAccounts(1);
+  if (!account) throw new Error("Não foi possível criar a conta.");
+  await trackEvent("account_created", null, null, {});
+  return account;
+}
+
 export async function listEpisodes(): Promise<Episode[]> {
   if (!isSupabaseConfigured()) {
     return localDb().episodes.sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -89,6 +140,7 @@ export async function getEpisode(id: string): Promise<Episode | null> {
 }
 
 export async function createEpisode(input: {
+  account_id: string;
   change_type: ChangeType;
   age_bucket: AgeBucket;
   initial_state: InitialState;
@@ -109,6 +161,24 @@ export async function createEpisode(input: {
   const { data, error } = await supabase.from("episodes").insert(row).select("*").single();
   if (error) throw error;
   await trackEvent("episode_created", data.id, null, input);
+  return data as Episode;
+}
+
+export async function updateEpisodeAccount(id: string, accountId: string): Promise<Episode> {
+  if (!isSupabaseConfigured()) {
+    const db = localDb();
+    const index = db.episodes.findIndex((x) => x.id === id);
+    if (index < 0) throw new Error("Episódio não encontrado.");
+    db.episodes[index] = { ...db.episodes[index], account_id: accountId };
+    saveLocal(db);
+    await trackEvent("episode_account_linked", id, null, {});
+    return db.episodes[index];
+  }
+  await getUserId();
+  const supabase = getSupabase()!;
+  const { data, error } = await supabase.from("episodes").update({ account_id: accountId }).eq("id", id).select("*").single();
+  if (error) throw error;
+  await trackEvent("episode_account_linked", id, null, {});
   return data as Episode;
 }
 

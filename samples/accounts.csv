@@ -1,0 +1,4 @@
+company_id,company_name,cs_owner,health_score,usage_30d,open_tickets,renewal_date,mrr
+acme-001,Acme,Maria,72,184,3,2026-11-10,4500
+foo-002,Foo Corp,João,48,73,9,2026-10-01,7200
+umbrella-003,Umbrella,Ana,84,251,1,2027-01-20,9800
