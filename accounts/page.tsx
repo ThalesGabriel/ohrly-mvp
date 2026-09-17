@@ -79,9 +79,11 @@ export default function AccountsPage() {
 
   return (
     <AppShell>
-      <div className="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+      <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
+          <div className="text-sm font-extrabold uppercase tracking-[0.11em] text-gray-400">CONTEXTO LONGITUDINAL</div>
           <h1 className="mt-2 text-3xl font-extrabold tracking-[-0.04em]">Contas</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">A conta preserva a história. Cada episódio continua sendo uma investigação criada deliberadamente pelo CSM.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href="/accounts/import" className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-gray-50"><FileUp size={16} /> Importar CSV</Link>

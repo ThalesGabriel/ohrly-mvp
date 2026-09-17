@@ -126,8 +126,8 @@ export default function NewEpisodePage() {
           </Field>
 
           {accountId && historicalEpisodes.length ? <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-indigo-900"><GitBranch size={15} /> Continuidade opcional</div>
-            <p className="mt-1 text-[11px] leading-5 text-indigo-700">Use quando esta nova situação ganha contexto a partir de um ciclo anterior já encerrado.</p>
+            <div className="flex items-center gap-2 text-sm font-semibold text-indigo-900"><GitBranch size={15} /> Continuidade opcional</div>
+            <p className="mt-1 text-sm leading-5 text-indigo-700">Use quando esta nova situação ganha contexto a partir de um ciclo anterior já encerrado.</p>
             <div className="mt-3 space-y-3">
               <Field label="Isso se relaciona com algo que já aconteceu antes?">
                 <select className={inputClass} value={sourceEpisodeId} onChange={(e) => { setSourceEpisodeId(e.target.value); if (!e.target.value) setRelationshipType(""); }}>
@@ -138,13 +138,13 @@ export default function NewEpisodePage() {
 
               {sourceEpisode ? <>
                 <div className="rounded-xl border border-indigo-100 bg-white p-3">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Ciclo anterior</div>
+                  <div className="text-sm font-bold uppercase tracking-wider text-gray-400">Ciclo anterior</div>
                   <div className="mt-1 text-sm font-semibold text-gray-900">{getEpisodeAlias(sourceEpisode.id)}</div>
-                  <div className="mt-1 text-[11px] text-gray-500">{changeTypeLabels[sourceEpisode.change_type]} · {sourceEpisode.closed_at ? `encerrado em ${formatDate(sourceEpisode.closed_at)}` : "ainda aberto"}</div>
+                  <div className="mt-1 text-sm text-gray-500">{changeTypeLabels[sourceEpisode.change_type]} · {sourceEpisode.closed_at ? `encerrado em ${formatDate(sourceEpisode.closed_at)}` : "ainda aberto"}</div>
                 </div>
                 <Field label="Como esta nova situação se relaciona?" hint="A classificação pertence ao novo ciclo; o episódio anterior permanece preservado.">
                   <div className="grid gap-2">
-                    {(Object.entries(episodeRelationshipQuestionLabels) as [EpisodeRelationshipType, string][]).map(([value, label]) => <button key={value} type="button" onClick={() => setRelationshipType(value)} className={`rounded-xl border p-3 text-left text-xs font-semibold transition ${relationshipType === value ? "border-indigo-500 bg-white text-indigo-900 ring-2 ring-indigo-100" : "border-indigo-100 bg-white text-gray-700 hover:border-indigo-300"}`}>{label}</button>)}
+                    {(Object.entries(episodeRelationshipQuestionLabels) as [EpisodeRelationshipType, string][]).map(([value, label]) => <button key={value} type="button" onClick={() => setRelationshipType(value)} className={`rounded-xl border p-3 text-left text-sm font-semibold transition ${relationshipType === value ? "border-indigo-500 bg-white text-indigo-900 ring-2 ring-indigo-100" : "border-indigo-100 bg-white text-gray-700 hover:border-indigo-300"}`}>{label}</button>)}
                   </div>
                 </Field>
               </> : null}

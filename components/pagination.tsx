@@ -24,17 +24,17 @@ export function Pagination({
 
   return (
     <div className="flex flex-col gap-3 border-t border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="text-[11px] text-gray-500">
+      <div className="text-sm text-gray-500">
         {start}–{end} de {total}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-2 text-[11px] text-gray-500">
+        <label className="flex items-center gap-2 text-sm text-gray-500">
           Por página
           <select
             value={pageSize}
             onChange={(event) => onPageSizeChange(Number(event.target.value))}
-            className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-700 outline-none focus:border-gray-400"
+            className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-sm font-semibold text-gray-700 outline-none focus:border-gray-400"
           >
             {pageSizeOptions.map((option) => (
               <option key={option} value={option}>{option}</option>
@@ -53,7 +53,7 @@ export function Pagination({
             <ChevronLeft size={15} />
           </button>
 
-          <div className="min-w-[76px] text-center text-[11px] font-semibold text-gray-600">
+          <div className="min-w-[76px] text-center text-sm font-semibold text-gray-600">
             {safePage} / {totalPages}
           </div>
 

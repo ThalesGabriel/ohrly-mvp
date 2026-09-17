@@ -92,6 +92,14 @@ export function getEpisodeNote(id: string) {
   return load().episodeNotes[id] || "";
 }
 
+export function getEpisodePrivateContext(id: string) {
+  const store = load();
+  return {
+    alias: store.episodeAliases[id] || "",
+    note: store.episodeNotes[id] || "",
+  };
+}
+
 export function setInterventionObjective(id: string, value: string) {
   const store = load();
   store.interventionObjectives[id] = value;

@@ -249,7 +249,7 @@ export default function EpisodeWorkspacePage() {
     <AppShell>
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-[0.11em] text-gray-400">{accountData ? <>CONTA · <Link href={`/accounts/${episode.account_id}`} className="hover:text-gray-700 hover:underline">{accountData.name}</Link></> : "CONTA NÃO VINCULADA"}</div>
+          <div className="text-sm font-extrabold uppercase tracking-[0.11em] text-gray-400">{accountData ? <>CONTA · <Link href={`/accounts/${episode.account_id}`} className="hover:text-gray-700 hover:underline">{accountData.name}</Link></> : "CONTA NÃO VINCULADA"}</div>
           <h1 className="mt-2 text-3xl font-extrabold tracking-[-0.04em]">{alias}</h1>
           <p className="mt-2 text-sm text-gray-500">{changeTypeLabels[episode.change_type]} · mudança percebida há {ageBucketLabels[episode.age_bucket]} · toda a história fica no mesmo workspace.</p>
         </div>
@@ -264,8 +264,8 @@ export default function EpisodeWorkspacePage() {
       {!episode.account_id ? (
         <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <div className="text-sm font-semibold text-amber-950">Este é um episódio legado sem conta vinculada.</div>
-          <div className="mt-1 text-xs leading-5 text-amber-800">A v0.1 preserva episódios antigos, mas novos ciclos passam a pertencer a uma conta.</div>
-          {accounts.length ? <div className="mt-3 flex max-w-xl gap-2"><select className={inputClass} value={legacyAccountId} onChange={(e) => setLegacyAccountId(e.target.value)}><option value="">Escolha a conta...</option>{accounts.map((account) => <option key={account.id} value={account.id}>{accountPrivateData[account.id]?.name || `Conta ${account.id.slice(0, 6).toUpperCase()}`}</option>)}</select><Button onClick={linkAccount} disabled={!legacyAccountId || saving}>Vincular</Button></div> : <Link href="/accounts" className="mt-3 inline-flex text-xs font-semibold text-amber-900 underline underline-offset-4">Cadastrar ou importar contas</Link>}
+          <div className="mt-1 text-sm leading-5 text-amber-800">A v0.1 preserva episódios antigos, mas novos ciclos passam a pertencer a uma conta.</div>
+          {accounts.length ? <div className="mt-3 flex max-w-xl gap-2"><select className={inputClass} value={legacyAccountId} onChange={(e) => setLegacyAccountId(e.target.value)}><option value="">Escolha a conta...</option>{accounts.map((account) => <option key={account.id} value={account.id}>{accountPrivateData[account.id]?.name || `Conta ${account.id.slice(0, 6).toUpperCase()}`}</option>)}</select><Button onClick={linkAccount} disabled={!legacyAccountId || saving}>Vincular</Button></div> : <Link href="/accounts" className="mt-3 inline-flex text-sm font-semibold text-amber-900 underline underline-offset-4">Cadastrar ou importar contas</Link>}
         </div>
       ) : null}
 
@@ -274,7 +274,7 @@ export default function EpisodeWorkspacePage() {
           <section className="rounded-[18px] border border-gray-200 bg-white p-5 shadow-soft">
             <div>
               <h2 className="font-semibold">Trajetória do episódio</h2>
-              <p className="mt-1 text-xs leading-5 text-gray-500">O ponto não é um alerta isolado, mas a história de uma mudança que persiste, recebe uma intervenção e produz uma resposta.</p>
+              <p className="mt-1 text-sm leading-5 text-gray-500">O ponto não é um alerta isolado, mas a história de uma mudança que persiste, recebe uma intervenção e produz uma resposta.</p>
             </div>
 
             <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-b from-white to-gray-50 p-4">
@@ -295,13 +295,13 @@ export default function EpisodeWorkspacePage() {
               <Signal label="Persistência percebida" value={ageBucketLabels[episode.age_bucket]} />
               <Signal label="Estado de entrada" value={episode.initial_state === "watch" ? "Observando" : episode.initial_state === "investigate" ? "Investigando" : "Ação considerada"} />
             </div>
-            {note ? <div className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900"><strong>Nota local:</strong> {note}</div> : null}
+            {note ? <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm leading-5 text-amber-900"><strong>Nota local:</strong> {note}</div> : null}
           </section>
 
           <section className="rounded-[18px] border border-gray-200 bg-white p-5 shadow-soft">
             <div>
               <h2 className="font-semibold">Ciclo atual</h2>
-              <p className="mt-1 text-xs leading-5 text-gray-500">Mudança, decisão, execução e resposta aparecem como uma única história em andamento.</p>
+              <p className="mt-1 text-sm leading-5 text-gray-500">Mudança, decisão, execução e resposta aparecem como uma única história em andamento.</p>
             </div>
 
             <div className="relative ml-2 mt-5 border-l-2 border-gray-200 pl-6">
@@ -310,7 +310,7 @@ export default function EpisodeWorkspacePage() {
               {!episode.closed_at ? (
                 <div className="relative pb-2">
                   <div className="absolute -left-[31px] top-1 h-3 w-3 rounded-full border-2 border-white bg-gray-300 ring-1 ring-gray-300" />
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Próximo passo</div>
+                  <div className="text-sm font-bold uppercase tracking-wider text-gray-400">Próximo passo</div>
                   <div className="mt-1 text-sm font-semibold">{nextStepForState(state)}</div>
 
                   {!intervention ? (
@@ -377,10 +377,10 @@ export default function EpisodeWorkspacePage() {
 
             {showReview && intervention ? (
               <InlinePanel title="Revisar resposta" onClose={() => setShowReview(false)}>
-                <p className="mb-3 text-xs leading-5 text-gray-500">Não estamos afirmando causalidade. Registre apenas a leitura do estado atual depois da intervenção.</p>
+                <p className="mb-3 text-sm leading-5 text-gray-500">Não estamos afirmando causalidade. Registre apenas a leitura do estado atual depois da intervenção.</p>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {(Object.entries(outcomeLabels) as [Outcome, string][]).map(([value, label]) => (
-                    <button key={value} type="button" onClick={() => setOutcome(value)} className={`rounded-xl border p-3 text-left text-xs font-semibold transition ${outcome === value ? "border-gray-900 bg-gray-50" : "border-gray-200 bg-white hover:border-gray-400"}`}>{label}</button>
+                    <button key={value} type="button" onClick={() => setOutcome(value)} className={`rounded-xl border p-3 text-left text-sm font-semibold transition ${outcome === value ? "border-gray-900 bg-gray-50" : "border-gray-200 bg-white hover:border-gray-400"}`}>{label}</button>
                   ))}
                 </div>
                 <div className="mt-3">
@@ -398,11 +398,11 @@ export default function EpisodeWorkspacePage() {
 
         <aside className="xl:sticky xl:top-6">
           <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-soft">
-            <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-gray-400">Estado atual</div>
+            <div className="text-sm font-extrabold uppercase tracking-[0.1em] text-gray-400">Estado atual</div>
             <div className="mt-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
               <StateBadge state={state} />
               <div className="mt-3 text-lg font-extrabold tracking-[-0.02em]">{nextStepForState(state)}</div>
-              <p className="mt-2 text-xs leading-5 text-gray-500">A interface sempre aponta para a próxima decisão, não para uma próxima página.</p>
+              <p className="mt-2 text-sm leading-5 text-gray-500">A interface sempre aponta para a próxima decisão, não para uma próxima página.</p>
             </div>
 
             <div className="mt-3 space-y-2">
@@ -417,7 +417,7 @@ export default function EpisodeWorkspacePage() {
 
             {!episode.closed_at ? <Button className="mt-4 w-full" onClick={primaryAction} disabled={saving}>{PrimaryActionLabel(state, Boolean(intervention))}</Button> : null}
             {canClose ? <Button variant="secondary" className="mt-2 w-full" onClick={closeCycle} disabled={saving}>Fechar ciclo</Button> : null}
-            {episode.closed_at ? <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-xs font-semibold text-emerald-800"><Check size={15} /> Ciclo encerrado e preservado.</div> : null}
+            {episode.closed_at ? <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-800"><Check size={15} /> Ciclo encerrado e preservado.</div> : null}
           </div>
         </aside>
       </div>
@@ -426,11 +426,11 @@ export default function EpisodeWorkspacePage() {
 }
 
 function Signal({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-xl border border-gray-200 bg-gray-50 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{label}</div><div className="mt-1 text-xs font-semibold text-gray-800">{value}</div></div>;
+  return <div className="rounded-xl border border-gray-200 bg-gray-50 p-3"><div className="text-sm font-bold uppercase tracking-wider text-gray-400">{label}</div><div className="mt-1 text-sm font-semibold text-gray-800">{value}</div></div>;
 }
 
 function Info({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-xl border border-gray-100 bg-gray-50 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{label}</div><div className="mt-1 text-xs font-semibold text-gray-800">{value}</div></div>;
+  return <div className="rounded-xl border border-gray-100 bg-gray-50 p-3"><div className="text-sm font-bold uppercase tracking-wider text-gray-400">{label}</div><div className="mt-1 text-sm font-semibold text-gray-800">{value}</div></div>;
 }
 
 function InlinePanel({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
@@ -473,9 +473,9 @@ function TimelineEvent({ item }: { item: TimelineItem }) {
   return (
     <div className="relative pb-6 last:pb-4">
       <div className={`absolute -left-[31px] top-1 h-3 w-3 rounded-full border-2 border-white ring-1 ring-gray-300 ${dot}`} />
-      <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{date}</div>
+      <div className="text-sm font-bold uppercase tracking-wider text-gray-400">{date}</div>
       <div className="mt-1 text-sm font-semibold">{title}</div>
-      <div className="mt-1 max-w-3xl text-xs leading-5 text-gray-500">{desc}</div>
+      <div className="mt-1 max-w-3xl text-sm leading-5 text-gray-500">{desc}</div>
     </div>
   );
 }

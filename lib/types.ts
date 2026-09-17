@@ -47,6 +47,23 @@ export type EpisodeUpdateType =
 
 export type EpisodeRelationshipType = "continuation" | "recurrence" | "related";
 
+export type PrecedentOrigin = "heuristic" | "research";
+
+export type PrecedentEvidenceCode =
+  | "same_change_type"
+  | "similar_trajectory"
+  | "shared_context_terms"
+  | "same_intervention_type"
+  | "same_continuity_type"
+  | "same_age_bucket";
+
+export type PrecedentFeedback =
+  | "not_relevant"
+  | "context_only"
+  | "changed_investigation"
+  | "changed_timing"
+  | "changed_action";
+
 export interface Account {
   id: string;
   user_id: string;
@@ -70,6 +87,22 @@ export interface EpisodeRelationship {
   source_episode_id: string;
   target_episode_id: string;
   relationship_type: EpisodeRelationshipType;
+  created_at: string;
+}
+
+
+export interface PrecedentSuggestion {
+  id: string;
+  user_id: string;
+  current_episode_id: string;
+  precedent_episode_id: string;
+  origin: PrecedentOrigin;
+  evidence_codes: PrecedentEvidenceCode[];
+  rank_score: number | null;
+  matcher_version: string;
+  presented_at: string | null;
+  feedback: PrecedentFeedback | null;
+  reviewed_at: string | null;
   created_at: string;
 }
 
@@ -174,4 +207,21 @@ export const episodeRelationshipQuestionLabels: Record<EpisodeRelationshipType, 
   continuation: "O caso anterior não estava realmente encerrado",
   recurrence: "O problema havia sido resolvido e voltou",
   related: "É uma situação diferente, mas o histórico anterior é relevante",
+};
+
+export const precedentEvidenceLabels: Record<PrecedentEvidenceCode, string> = {
+  same_change_type: "Mesma mudança inicial",
+  similar_trajectory: "Trajetória começou de forma semelhante",
+  shared_context_terms: "Contexto livre reforça a semelhança",
+  same_intervention_type: "Intervenção semelhante apareceu na trajetória",
+  same_continuity_type: "Mesmo tipo de continuidade",
+  same_age_bucket: "Persistência inicial semelhante",
+};
+
+export const precedentFeedbackLabels: Record<PrecedentFeedback, string> = {
+  not_relevant: "Não é relevante",
+  context_only: "Só adicionou contexto",
+  changed_investigation: "Mudou o que investigar",
+  changed_timing: "Mudou quando agir",
+  changed_action: "Mudou como agir",
 };

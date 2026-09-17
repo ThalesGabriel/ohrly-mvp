@@ -17,7 +17,7 @@ export function LoopStepper({ active }: { active: "observe" | "act" | "learn" })
               ? "bg-orange-50 text-orange-900"
               : "bg-gray-100 text-gray-500";
         return (
-          <div key={step.id} className={`rounded-xl p-3 text-xs ${classes}`}>
+          <div key={step.id} className={`rounded-xl p-3 text-sm ${classes}`}>
             <strong className="mb-1 block text-gray-900">{step.label}</strong>
             {step.text}
           </div>

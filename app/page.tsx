@@ -203,22 +203,9 @@ export default function HomePage() {
 
   return (
     <AppShell>
-      <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+      <div className="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <h1 className="text-3xl font-extrabold tracking-[-0.04em] text-gray-900">O que precisa de você hoje?</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
-            Filtre a fila por tipo ou estado e entre direto no episódio que exige uma decisão.
-          </p>
-        </div>
-      </div>
-
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1 items-center">
-        <div className="flex-1">
-          <QuickViewButton active={quickView === "all"} onClick={() => setQuickView("all")}>Todos</QuickViewButton>
-          <QuickViewButton active={quickView === "needs_me"} onClick={() => setQuickView("needs_me")}>Precisa de mim</QuickViewButton>
-          <QuickViewButton active={quickView === "review"} onClick={() => setQuickView("review")}>Revisar hoje</QuickViewButton>
-          <QuickViewButton active={quickView === "recovering"} onClick={() => setQuickView("recovering")}>Em acompanhamento</QuickViewButton>
-          <QuickViewButton active={quickView === "exceptions"} onClick={() => setQuickView("exceptions")}>Exceções</QuickViewButton>
         </div>
         <div>
           <Link
@@ -280,10 +267,11 @@ export default function HomePage() {
             type="button"
             onClick={clearFilters}
             disabled={!hasExplicitFilters}
-            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-gray-200 px-3 text-xs font-semibold text-gray-600 transition hover:bg-gray-50 disabled:cursor-default disabled:opacity-35"
+            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-gray-200 px-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 disabled:cursor-default disabled:opacity-35"
           >
             <X size={14} /> Limpar
           </button>
+
         </div>
       </div>
 
@@ -304,14 +292,14 @@ export default function HomePage() {
           {filteredRows.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <div className="text-sm font-semibold text-gray-800">Nenhum episódio encontrado</div>
-              <div className="mt-1 text-xs text-gray-500">Ajuste os filtros ou escolha outra visão da fila.</div>
-              <button onClick={clearFilters} className="mt-4 text-xs font-semibold text-gray-700 underline underline-offset-4">Limpar filtros</button>
+              <div className="mt-1 text-sm text-gray-500">Ajuste os filtros ou escolha outra visão da fila.</div>
+              <button onClick={clearFilters} className="mt-4 text-sm font-semibold text-gray-700 underline underline-offset-4">Limpar filtros</button>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1050px] border-collapse text-left">
                 <thead className="bg-gray-50/80">
-                  <tr className="border-b border-gray-100 text-[10px] font-extrabold uppercase tracking-[0.08em] text-gray-400">
+                  <tr className="border-b border-gray-100 text-sm font-extrabold uppercase tracking-[0.08em] text-gray-400">
                     <th className="px-4 py-3">Conta / episódio</th>
                     <th className="px-4 py-3">Tipo</th>
                     <th className="px-4 py-3">Estado atual</th>
@@ -353,9 +341,9 @@ function MetricButton({ icon, value, label, active, onClick }: { icon: ReactNode
       onClick={onClick}
       className={`rounded-2xl border p-4 text-left transition ${active ? "border-gray-900 bg-gray-900 text-white shadow-soft" : "border-gray-200 bg-white hover:border-gray-300"}`}
     >
-      <div className={`flex items-center justify-between ${active ? "text-gray-300" : "text-gray-400"}`}>{icon}<span className="text-[10px] font-bold uppercase tracking-wider">atalho</span></div>
+      <div className={`flex items-center justify-between ${active ? "text-gray-300" : "text-gray-400"}`}>{icon}<span className="text-sm font-bold uppercase tracking-wider">atalho</span></div>
       <div className="mt-3 text-3xl font-extrabold tracking-[-0.04em]">{value}</div>
-      <div className={`mt-1 text-xs ${active ? "text-gray-300" : "text-gray-500"}`}>{label}</div>
+      <div className={`mt-1 text-sm ${active ? "text-gray-300" : "text-gray-500"}`}>{label}</div>
     </button>
   );
 }
@@ -365,7 +353,7 @@ function QuickViewButton({ active, onClick, children }: { active: boolean; onCli
     <button
       type="button"
       onClick={onClick}
-      className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition ${active ? "bg-gray-900 text-white" : "border border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}
+      className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition ${active ? "bg-gray-900 text-white" : "border border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}
     >
       {children}
     </button>
@@ -381,11 +369,11 @@ function SelectFilter({ icon, value, onChange, children, ariaLabel }: { icon: Re
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={ariaLabel}
-        className="h-10 w-full appearance-none rounded-xl border border-gray-200 bg-white pl-8 pr-8 text-xs font-semibold text-gray-700 outline-none transition focus:border-gray-400"
+        className="h-10 w-full appearance-none rounded-xl border border-gray-200 bg-white pl-8 pr-8 text-sm font-semibold text-gray-700 outline-none transition focus:border-gray-400"
       >
         {children}
       </select>
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-gray-400">▼</span>
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">▼</span>
     </label>
   );
 }
@@ -400,15 +388,15 @@ function EpisodeTableRow({ row }: { row: Row }) {
       <td className="p-0">
         <Link href={`/episodes/${episode.id}`} className="block px-4 py-4">
           <div className="font-semibold text-gray-900 group-hover:underline group-hover:underline-offset-2">{accountName}</div>
-          <div className="mt-1 max-w-[250px] truncate text-[11px] text-gray-500">{alias}</div>
+          <div className="mt-1 max-w-[250px] truncate text-sm text-gray-500">{alias}</div>
         </Link>
       </td>
-      <td className="p-0"><Link href={`/episodes/${episode.id}`} className="block px-4 py-4 text-xs text-gray-600">{changeTypeLabels[episode.change_type]}</Link></td>
+      <td className="p-0"><Link href={`/episodes/${episode.id}`} className="block px-4 py-4 text-sm text-gray-600">{changeTypeLabels[episode.change_type]}</Link></td>
       <td className="p-0"><Link href={`/episodes/${episode.id}`} className="block px-4 py-4"><StateBadge state={state} /></Link></td>
-      <td className="p-0"><Link href={`/episodes/${episode.id}`} className="block px-4 py-4 text-xs font-medium text-gray-700">{ageBucketLabels[episode.age_bucket]}</Link></td>
-      <td className="p-0"><Link href={`/episodes/${episode.id}`} className="block max-w-[190px] px-4 py-4 text-xs text-gray-600">{lastAction}</Link></td>
-      <td className="p-0"><Link href={`/episodes/${episode.id}`} className="block max-w-[260px] px-4 py-4 text-xs font-medium leading-5 text-gray-800">{nextStepForState(state)}</Link></td>
-      <td className="p-0"><Link href={`/episodes/${episode.id}`} className={`block whitespace-nowrap px-4 py-4 text-xs font-semibold ${timing.urgent ? "text-red-600" : "text-gray-600"}`}>{timing.label}</Link></td>
+      <td className="p-0"><Link href={`/episodes/${episode.id}`} className="block px-4 py-4 text-sm font-medium text-gray-700">{ageBucketLabels[episode.age_bucket]}</Link></td>
+      <td className="p-0"><Link href={`/episodes/${episode.id}`} className="block max-w-[190px] px-4 py-4 text-sm text-gray-600">{lastAction}</Link></td>
+      <td className="p-0"><Link href={`/episodes/${episode.id}`} className="block max-w-[260px] px-4 py-4 text-sm font-medium leading-5 text-gray-800">{nextStepForState(state)}</Link></td>
+      <td className="p-0"><Link href={`/episodes/${episode.id}`} className={`block whitespace-nowrap px-4 py-4 text-sm font-semibold ${timing.urgent ? "text-red-600" : "text-gray-600"}`}>{timing.label}</Link></td>
     </tr>
   );
 }

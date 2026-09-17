@@ -11,5 +11,5 @@ export function StateBadge({ state }: { state: DisplayState }) {
     review_due: "bg-blue-50 text-blue-700",
     closed: "bg-gray-900 text-white",
   };
-  return <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${styles[state]}`}>{displayStateLabels[state]}</span>;
+  return <span className={`rounded-full px-2.5 py-1 text-sm font-bold ${styles[state]}`}>{displayStateLabels[state]}</span>;
 }

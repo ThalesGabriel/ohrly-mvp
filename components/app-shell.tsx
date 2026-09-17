@@ -30,7 +30,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-[#f7f8fa] lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
       <aside className="bg-gray-900 px-5 py-6 text-white lg:sticky lg:top-0 lg:h-screen">
         <div className="text-[22px] font-extrabold tracking-[-0.04em]">ohrly</div>
-        <div className="mt-1 text-xs text-gray-400">MVP v0.1 · Accounts + Episodes</div>
+        <div className="mt-1 text-sm text-gray-400">MVP v0.1 · Accounts + Episodes</div>
 
         <nav className="mt-8 flex gap-2 overflow-x-auto lg:flex-col">
           <NavLink href="/" active={pathname === "/"} icon={<ListTodo size={16} />}>Fila de trabalho</NavLink>
@@ -38,7 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <NavLink href="/episodes/new" active={pathname === "/episodes/new"} icon={<Plus size={16} />}>Registrar episódio</NavLink>
         </nav>
 
-        <div className="mt-5 rounded-xl border border-gray-700 p-3 text-[11px] leading-5 text-gray-400 lg:absolute lg:bottom-[148px] lg:left-5 lg:right-5 lg:mt-0">
+        <div className="mt-5 rounded-xl border border-gray-700 p-3 text-sm leading-5 text-gray-400 lg:absolute lg:bottom-[148px] lg:left-5 lg:right-5 lg:mt-0">
           <strong className="text-gray-200">Princípio da v0.1</strong><br />A conta preserva contexto. O episódio continua sendo o objeto de trabalho criado pelo CSM.
         </div>
 
@@ -47,8 +47,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-800 text-gray-300"><UserRound size={15} /></div>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[11px] font-semibold text-gray-200">{user.email ?? "Usuário Ohrly"}</div>
-                <div className="mt-0.5 text-[10px] text-emerald-400">Acesso seguro</div>
+                <div className="truncate text-sm font-semibold text-gray-200">{user.email ?? "Usuário Ohrly"}</div>
+                <div className="mt-0.5 text-sm text-emerald-400">Acesso seguro</div>
               </div>
               <button
                 type="button"
@@ -63,7 +63,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         ) : null}
 
-        <div className="mt-3 flex items-center gap-2 rounded-xl border border-gray-700 px-3 py-2 text-[11px] text-gray-300 lg:absolute lg:bottom-5 lg:left-5 lg:right-5 lg:mt-0">
+        <div className="mt-3 flex items-center gap-2 rounded-xl border border-gray-700 px-3 py-2 text-sm text-gray-300 lg:absolute lg:bottom-5 lg:left-5 lg:right-5 lg:mt-0">
           {mode === "supabase" ? <Activity size={14} /> : <ShieldCheck size={14} />}
           <span>{mode === "supabase" ? "Supabase conectado · RLS ativo" : "Modo local · sem backend configurado"}</span>
         </div>

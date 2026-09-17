@@ -20,7 +20,7 @@ export function EpisodeCard({ episode, intervention, latestReview }: { episode: 
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="font-semibold text-gray-900">{getEpisodeAlias(episode.id)}</div>
-          <div className="mt-1 text-xs text-gray-500">{changeTypeLabels[episode.change_type]} · registrado {age}</div>
+          <div className="mt-1 text-sm text-gray-500">{changeTypeLabels[episode.change_type]} · registrado {age}</div>
         </div>
         <StateBadge state={state} />
       </div>
@@ -30,7 +30,7 @@ export function EpisodeCard({ episode, intervention, latestReview }: { episode: 
           style={{ width: state === "closed" ? "100%" : state === "review_due" ? "92%" : intervention ? "62%" : "34%" }}
         />
       </div>
-      <div className="mt-3 flex flex-wrap justify-between gap-2 text-[11px] text-gray-500">
+      <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm text-gray-500">
         <span>{intervention ? "Intervenção registrada" : "Intervenção ainda não registrada"}</span>
         <span>{latestReview ? `Última leitura: ${latestReview.outcome.replaceAll("_", " ")}` : "Sem outcome ainda"}</span>
       </div>

@@ -129,3 +129,48 @@ select
   count(distinct user_id) filter (where event_name = 'continuity_context_viewed') as users_who_viewed_prior_context
 from public.telemetry_events
 where event_name in ('episode_relationship_created', 'continuity_context_viewed');
+
+-- 15) Precedentes — quantos foram sugeridos, vistos e julgados úteis?
+select
+  count(*) as suggestions,
+  count(*) filter (where presented_at is not null) as presented,
+  count(*) filter (where feedback is not null) as reviewed,
+  count(*) filter (where feedback = 'not_relevant') as not_relevant,
+  count(*) filter (where feedback = 'context_only') as context_only,
+  count(*) filter (where feedback in ('changed_investigation','changed_timing','changed_action')) as decision_changing
+from public.episode_precedent_suggestions;
+
+-- 16) Decision-changing precedent rate — a métrica principal da v0.2.2
+select
+  count(*) filter (where feedback is not null) as reviewed_precedents,
+  count(*) filter (where feedback in ('changed_investigation','changed_timing','changed_action')) as decision_changing_precedents,
+  round(
+    100.0 * count(*) filter (where feedback in ('changed_investigation','changed_timing','changed_action'))
+    / nullif(count(*) filter (where feedback is not null), 0),
+    1
+  ) as decision_changing_precedent_rate_pct
+from public.episode_precedent_suggestions;
+
+-- 17) Qual evidência está gerando precedentes úteis? Não há texto livre nesta consulta.
+select
+  evidence_code,
+  count(*) as suggestions,
+  count(*) filter (where feedback <> 'not_relevant') as considered_relevant,
+  count(*) filter (where feedback in ('changed_investigation','changed_timing','changed_action')) as decision_changing
+from public.episode_precedent_suggestions p,
+unnest(p.evidence_codes) as evidence_code
+group by evidence_code
+order by decision_changing desc, considered_relevant desc, suggestions desc;
+
+-- 18) Matcher evolution — trajectory-first precedents should outperform text-led suggestions
+select
+  matcher_version,
+  count(*) as suggestions,
+  count(*) filter (where presented_at is not null) as presented,
+  count(*) filter (where feedback is not null) as reviewed,
+  count(*) filter (where feedback <> 'not_relevant') as considered_relevant,
+  count(*) filter (where feedback in ('changed_investigation','changed_timing','changed_action')) as decision_changing,
+  round(avg(rank_score)::numeric, 3) as avg_rank_score
+from public.episode_precedent_suggestions
+group by matcher_version
+order by suggestions desc;

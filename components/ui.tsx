@@ -31,15 +31,15 @@ export function Pill({ children, tone = "indigo" }: { children: ReactNode; tone?
     blue: "bg-blue-50 text-blue-700",
     gray: "bg-gray-100 text-gray-600",
   }[tone];
-  return <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${styles}`}>{children}</span>;
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-sm font-bold ${styles}`}>{children}</span>;
 }
 
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold text-gray-800">{label}</span>
+      <span className="mb-1.5 block text-sm font-semibold text-gray-800">{label}</span>
       {children}
-      {hint ? <span className="mt-1.5 block text-[11px] leading-4 text-gray-500">{hint}</span> : null}
+      {hint ? <span className="mt-1.5 block text-sm leading-4 text-gray-500">{hint}</span> : null}
     </label>
   );
 }
