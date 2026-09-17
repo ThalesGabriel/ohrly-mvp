@@ -1,5 +1,6 @@
 "use client";
 
+import { clearQueryCache, readThroughCache } from "@/lib/query-cache";
 import { getAuthenticatedUser, getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import type {
   Account,
@@ -75,25 +76,38 @@ async function getUserId() {
   return user.id;
 }
 
+const REPOSITORY_CACHE_TTL_MS = 30_000;
+
+async function cachedRead<T>(key: string, loader: () => Promise<T>): Promise<T> {
+  const userId = await getUserId();
+  return readThroughCache(`${userId}:${key}`, loader, REPOSITORY_CACHE_TTL_MS);
+}
+
+function invalidateRepositoryCache() {
+  clearQueryCache();
+}
+
 
 export async function listAccounts(): Promise<Account[]> {
-  if (!isSupabaseConfigured()) {
-    return localDb().accounts.sort((a, b) => b.created_at.localeCompare(a.created_at));
-  }
-  await getUserId();
-  const supabase = getSupabase()!;
-  const { data, error } = await supabase.from("accounts").select("*").order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as Account[];
+  return cachedRead("accounts:list", async () => {
+    if (!isSupabaseConfigured()) {
+      return localDb().accounts.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    }
+    const supabase = getSupabase()!;
+    const { data, error } = await supabase.from("accounts").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as Account[];
+  });
 }
 
 export async function getAccount(id: string): Promise<Account | null> {
-  if (!isSupabaseConfigured()) return localDb().accounts.find((x) => x.id === id) ?? null;
-  await getUserId();
-  const supabase = getSupabase()!;
-  const { data, error } = await supabase.from("accounts").select("*").eq("id", id).maybeSingle();
-  if (error) throw error;
-  return data as Account | null;
+  return cachedRead(`accounts:${id}`, async () => {
+    if (!isSupabaseConfigured()) return localDb().accounts.find((x) => x.id === id) ?? null;
+    const supabase = getSupabase()!;
+    const { data, error } = await supabase.from("accounts").select("*").eq("id", id).maybeSingle();
+    if (error) throw error;
+    return data as Account | null;
+  });
 }
 
 export async function createAccounts(count: number): Promise<Account[]> {
@@ -106,6 +120,7 @@ export async function createAccounts(count: number): Promise<Account[]> {
     const accounts = Array.from({ length: count }, () => ({ id: uid(), user_id: userId, created_at: now } satisfies Account));
     db.accounts.push(...accounts);
     saveLocal(db);
+    invalidateRepositoryCache();
     return accounts;
   }
 
@@ -113,6 +128,7 @@ export async function createAccounts(count: number): Promise<Account[]> {
   const rows = Array.from({ length: count }, () => ({ user_id: userId }));
   const { data, error } = await supabase.from("accounts").insert(rows).select("*");
   if (error) throw error;
+  invalidateRepositoryCache();
   return (data ?? []) as Account[];
 }
 
@@ -124,23 +140,25 @@ export async function createAccount(): Promise<Account> {
 }
 
 export async function listEpisodes(): Promise<Episode[]> {
-  if (!isSupabaseConfigured()) {
-    return localDb().episodes.sort((a, b) => b.created_at.localeCompare(a.created_at));
-  }
-  await getUserId();
-  const supabase = getSupabase()!;
-  const { data, error } = await supabase.from("episodes").select("*").order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as Episode[];
+  return cachedRead("episodes:list", async () => {
+    if (!isSupabaseConfigured()) {
+      return localDb().episodes.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    }
+    const supabase = getSupabase()!;
+    const { data, error } = await supabase.from("episodes").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as Episode[];
+  });
 }
 
 export async function getEpisode(id: string): Promise<Episode | null> {
-  if (!isSupabaseConfigured()) return localDb().episodes.find((x) => x.id === id) ?? null;
-  await getUserId();
-  const supabase = getSupabase()!;
-  const { data, error } = await supabase.from("episodes").select("*").eq("id", id).maybeSingle();
-  if (error) throw error;
-  return data as Episode | null;
+  return cachedRead(`episodes:${id}`, async () => {
+    if (!isSupabaseConfigured()) return localDb().episodes.find((x) => x.id === id) ?? null;
+    const supabase = getSupabase()!;
+    const { data, error } = await supabase.from("episodes").select("*").eq("id", id).maybeSingle();
+    if (error) throw error;
+    return data as Episode | null;
+  });
 }
 
 export async function createEpisode(input: {
@@ -157,6 +175,7 @@ export async function createEpisode(input: {
     const episode: Episode = { id: uid(), ...row, created_at: new Date().toISOString(), closed_at: null };
     db.episodes.push(episode);
     saveLocal(db);
+    invalidateRepositoryCache();
     await trackEvent("episode_created", episode.id, null, input);
     return episode;
   }
@@ -164,19 +183,21 @@ export async function createEpisode(input: {
   const supabase = getSupabase()!;
   const { data, error } = await supabase.from("episodes").insert(row).select("*").single();
   if (error) throw error;
+  invalidateRepositoryCache();
   await trackEvent("episode_created", data.id, null, input);
   return data as Episode;
 }
 
 export async function listEpisodeRelationships(): Promise<EpisodeRelationship[]> {
-  if (!isSupabaseConfigured()) {
-    return localDb().relationships.sort((a, b) => b.created_at.localeCompare(a.created_at));
-  }
-  await getUserId();
-  const supabase = getSupabase()!;
-  const { data, error } = await supabase.from("episode_relationships").select("*").order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as EpisodeRelationship[];
+  return cachedRead("episode-relationships:list", async () => {
+    if (!isSupabaseConfigured()) {
+      return localDb().relationships.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    }
+    const supabase = getSupabase()!;
+    const { data, error } = await supabase.from("episode_relationships").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as EpisodeRelationship[];
+  });
 }
 
 export async function createEpisodeRelationship(input: {
@@ -212,6 +233,7 @@ export async function createEpisodeRelationship(input: {
     };
     db.relationships.push(relationship);
     saveLocal(db);
+    invalidateRepositoryCache();
     await trackEvent("episode_relationship_created", input.target_episode_id, null, {
       source_episode_id: input.source_episode_id,
       relationship_type: input.relationship_type,
@@ -222,6 +244,7 @@ export async function createEpisodeRelationship(input: {
   const supabase = getSupabase()!;
   const { data, error } = await supabase.from("episode_relationships").insert({ user_id: userId, ...input }).select("*").single();
   if (error) throw error;
+  invalidateRepositoryCache();
   await trackEvent("episode_relationship_created", input.target_episode_id, null, {
     source_episode_id: input.source_episode_id,
     relationship_type: input.relationship_type,
@@ -236,6 +259,7 @@ export async function updateEpisodeAccount(id: string, accountId: string): Promi
     if (index < 0) throw new Error("Episódio não encontrado.");
     db.episodes[index] = { ...db.episodes[index], account_id: accountId };
     saveLocal(db);
+    invalidateRepositoryCache();
     await trackEvent("episode_account_linked", id, null, {});
     return db.episodes[index];
   }
@@ -243,6 +267,7 @@ export async function updateEpisodeAccount(id: string, accountId: string): Promi
   const supabase = getSupabase()!;
   const { data, error } = await supabase.from("episodes").update({ account_id: accountId }).eq("id", id).select("*").single();
   if (error) throw error;
+  invalidateRepositoryCache();
   await trackEvent("episode_account_linked", id, null, {});
   return data as Episode;
 }
@@ -254,6 +279,7 @@ export async function updateEpisodeDecision(id: string, next: InitialState): Pro
     if (index < 0) throw new Error("Episódio não encontrado.");
     db.episodes[index] = { ...db.episodes[index], initial_state: next };
     saveLocal(db);
+    invalidateRepositoryCache();
     await trackEvent("episode_decision_updated", id, null, { initial_state: next });
     return db.episodes[index];
   }
@@ -261,6 +287,7 @@ export async function updateEpisodeDecision(id: string, next: InitialState): Pro
   const supabase = getSupabase()!;
   const { data, error } = await supabase.from("episodes").update({ initial_state: next }).eq("id", id).select("*").single();
   if (error) throw error;
+  invalidateRepositoryCache();
   await trackEvent("episode_decision_updated", id, null, { initial_state: next });
   return data as Episode;
 }
@@ -273,6 +300,7 @@ export async function closeEpisode(id: string): Promise<Episode> {
     if (index < 0) throw new Error("Episódio não encontrado.");
     db.episodes[index] = { ...db.episodes[index], closed_at: closedAt };
     saveLocal(db);
+    invalidateRepositoryCache();
     await trackEvent("episode_closed", id, null, {});
     return db.episodes[index];
   }
@@ -280,28 +308,43 @@ export async function closeEpisode(id: string): Promise<Episode> {
   const supabase = getSupabase()!;
   const { data, error } = await supabase.from("episodes").update({ closed_at: closedAt }).eq("id", id).select("*").single();
   if (error) throw error;
+  invalidateRepositoryCache();
   await trackEvent("episode_closed", id, null, {});
   return data as Episode;
 }
 
+export async function listInterventions(): Promise<Intervention[]> {
+  return cachedRead("interventions:list", async () => {
+    if (!isSupabaseConfigured()) {
+      return localDb().interventions.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    }
+    const supabase = getSupabase()!;
+    const { data, error } = await supabase.from("interventions").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as Intervention[];
+  });
+}
+
 export async function getIntervention(id: string): Promise<Intervention | null> {
-  if (!isSupabaseConfigured()) return localDb().interventions.find((x) => x.id === id) ?? null;
-  await getUserId();
-  const supabase = getSupabase()!;
-  const { data, error } = await supabase.from("interventions").select("*").eq("id", id).maybeSingle();
-  if (error) throw error;
-  return data as Intervention | null;
+  return cachedRead(`interventions:${id}`, async () => {
+    if (!isSupabaseConfigured()) return localDb().interventions.find((x) => x.id === id) ?? null;
+    const supabase = getSupabase()!;
+    const { data, error } = await supabase.from("interventions").select("*").eq("id", id).maybeSingle();
+    if (error) throw error;
+    return data as Intervention | null;
+  });
 }
 
 export async function getInterventionForEpisode(episodeId: string): Promise<Intervention | null> {
-  if (!isSupabaseConfigured()) {
-    return localDb().interventions.filter((x) => x.episode_id === episodeId).sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
-  }
-  await getUserId();
-  const supabase = getSupabase()!;
-  const { data, error } = await supabase.from("interventions").select("*").eq("episode_id", episodeId).order("created_at", { ascending: false }).limit(1).maybeSingle();
-  if (error) throw error;
-  return data as Intervention | null;
+  return cachedRead(`interventions:episode:${episodeId}`, async () => {
+    if (!isSupabaseConfigured()) {
+      return localDb().interventions.filter((x) => x.episode_id === episodeId).sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
+    }
+    const supabase = getSupabase()!;
+    const { data, error } = await supabase.from("interventions").select("*").eq("episode_id", episodeId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (error) throw error;
+    return data as Intervention | null;
+  });
 }
 
 export async function createIntervention(input: {
@@ -319,6 +362,7 @@ export async function createIntervention(input: {
     const intervention: Intervention = { id: uid(), ...row, executed_at: null, execution_updated_at: null, exception_type: null, created_at: new Date().toISOString() };
     db.interventions.push(intervention);
     saveLocal(db);
+    invalidateRepositoryCache();
     await trackEvent("intervention_created", input.episode_id, intervention.id, {
       intervention_type: input.intervention_type,
       execution_deadline_hours: input.execution_deadline_hours,
@@ -330,6 +374,7 @@ export async function createIntervention(input: {
   const supabase = getSupabase()!;
   const { data, error } = await supabase.from("interventions").insert(row).select("*").single();
   if (error) throw error;
+  invalidateRepositoryCache();
   await trackEvent("intervention_created", input.episode_id, data.id, {
     intervention_type: input.intervention_type,
     execution_deadline_hours: input.execution_deadline_hours,
@@ -358,6 +403,7 @@ export async function updateExecutionState(
     if (index < 0) throw new Error("Intervenção não encontrada.");
     db.interventions[index] = { ...db.interventions[index], ...patch };
     saveLocal(db);
+    invalidateRepositoryCache();
     await trackEvent("execution_updated", episodeId, interventionId, { execution_state: executionState });
     return db.interventions[index];
   }
@@ -366,19 +412,33 @@ export async function updateExecutionState(
   const supabase = getSupabase()!;
   const { data, error } = await supabase.from("interventions").update(patch).eq("id", interventionId).select("*").single();
   if (error) throw error;
+  invalidateRepositoryCache();
   await trackEvent("execution_updated", episodeId, interventionId, { execution_state: executionState });
   return data as Intervention;
 }
 
+export async function listReviews(): Promise<Review[]> {
+  return cachedRead("reviews:list", async () => {
+    if (!isSupabaseConfigured()) {
+      return localDb().reviews.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    }
+    const supabase = getSupabase()!;
+    const { data, error } = await supabase.from("reviews").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as Review[];
+  });
+}
+
 export async function listReviewsForIntervention(interventionId: string): Promise<Review[]> {
-  if (!isSupabaseConfigured()) {
-    return localDb().reviews.filter((x) => x.intervention_id === interventionId).sort((a, b) => b.created_at.localeCompare(a.created_at));
-  }
-  await getUserId();
-  const supabase = getSupabase()!;
-  const { data, error } = await supabase.from("reviews").select("*").eq("intervention_id", interventionId).order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as Review[];
+  return cachedRead(`reviews:intervention:${interventionId}`, async () => {
+    if (!isSupabaseConfigured()) {
+      return localDb().reviews.filter((x) => x.intervention_id === interventionId).sort((a, b) => b.created_at.localeCompare(a.created_at));
+    }
+    const supabase = getSupabase()!;
+    const { data, error } = await supabase.from("reviews").select("*").eq("intervention_id", interventionId).order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as Review[];
+  });
 }
 
 export async function createReview(input: {
@@ -395,6 +455,7 @@ export async function createReview(input: {
     const review: Review = { id: uid(), ...row, created_at: new Date().toISOString() };
     db.reviews.push(review);
     saveLocal(db);
+    invalidateRepositoryCache();
     await trackEvent("episode_reviewed", input.episode_id, input.intervention_id, {
       outcome: input.outcome,
       decision_impact: input.decision_impact,
@@ -405,6 +466,7 @@ export async function createReview(input: {
   const supabase = getSupabase()!;
   const { data, error } = await supabase.from("reviews").insert(row).select("*").single();
   if (error) throw error;
+  invalidateRepositoryCache();
   await trackEvent("episode_reviewed", input.episode_id, input.intervention_id, {
     outcome: input.outcome,
     decision_impact: input.decision_impact,
@@ -413,14 +475,15 @@ export async function createReview(input: {
 }
 
 export async function listEpisodeUpdates(episodeId: string): Promise<EpisodeUpdate[]> {
-  if (!isSupabaseConfigured()) {
-    return localDb().updates.filter((x) => x.episode_id === episodeId).sort((a, b) => a.created_at.localeCompare(b.created_at));
-  }
-  await getUserId();
-  const supabase = getSupabase()!;
-  const { data, error } = await supabase.from("episode_updates").select("*").eq("episode_id", episodeId).order("created_at", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as EpisodeUpdate[];
+  return cachedRead(`episode-updates:${episodeId}`, async () => {
+    if (!isSupabaseConfigured()) {
+      return localDb().updates.filter((x) => x.episode_id === episodeId).sort((a, b) => a.created_at.localeCompare(b.created_at));
+    }
+    const supabase = getSupabase()!;
+    const { data, error } = await supabase.from("episode_updates").select("*").eq("episode_id", episodeId).order("created_at", { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as EpisodeUpdate[];
+  });
 }
 
 export async function createEpisodeUpdate(input: { episode_id: string; update_type: EpisodeUpdateType }): Promise<EpisodeUpdate> {
@@ -432,6 +495,7 @@ export async function createEpisodeUpdate(input: { episode_id: string; update_ty
     const update: EpisodeUpdate = { id: uid(), ...row, created_at: new Date().toISOString() };
     db.updates.push(update);
     saveLocal(db);
+    invalidateRepositoryCache();
     await trackEvent("episode_update_added", input.episode_id, null, { update_type: input.update_type });
     return update;
   }
@@ -439,6 +503,7 @@ export async function createEpisodeUpdate(input: { episode_id: string; update_ty
   const supabase = getSupabase()!;
   const { data, error } = await supabase.from("episode_updates").insert(row).select("*").single();
   if (error) throw error;
+  invalidateRepositoryCache();
   await trackEvent("episode_update_added", input.episode_id, null, { update_type: input.update_type });
   return data as EpisodeUpdate;
 }

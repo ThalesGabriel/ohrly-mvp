@@ -24,6 +24,7 @@ import { ptBR } from "date-fns/locale";
 import { AppShell } from "@/components/app-shell";
 import { ErrorBox } from "@/components/error-box";
 import { LoadingBlock } from "@/components/loading";
+import { Pagination } from "@/components/pagination";
 import { StateBadge } from "@/components/state-badge";
 import {
   deriveDisplayState,
@@ -33,7 +34,7 @@ import {
   type DisplayState,
 } from "@/lib/display";
 import { getAllAccountPrivateData, getEpisodeAlias } from "@/lib/local-private";
-import { getInterventionForEpisode, listEpisodes, listReviewsForIntervention } from "@/lib/repository";
+import { listEpisodes, listInterventions, listReviews } from "@/lib/repository";
 import {
   CHANGE_TYPES,
   ageBucketLabels,
@@ -83,33 +84,51 @@ export default function HomePage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [quickView, setQuickView] = useState<QuickView>("needs_me");
+  const [quickView, setQuickView] = useState<QuickView>("all");
   const [typeFilter, setTypeFilter] = useState<ChangeType | "all">("all");
   const [stateFilter, setStateFilter] = useState<DisplayState | "all">("all");
   const [query, setQuery] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("urgency");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   async function load() {
     try {
       setLoading(true);
       setError("");
-      const episodes = await listEpisodes();
+      const [episodes, interventions, reviews] = await Promise.all([
+        listEpisodes(),
+        listInterventions(),
+        listReviews(),
+      ]);
       const accountData = getAllAccountPrivateData();
-      const enriched = await Promise.all(
-        episodes.map(async (episode) => {
-          const intervention = await getInterventionForEpisode(episode.id);
-          const reviews = intervention ? await listReviewsForIntervention(intervention.id) : [];
-          const latestReview = reviews[0] ?? null;
-          return {
-            episode,
-            intervention,
-            latestReview,
-            state: deriveDisplayState(episode, intervention, latestReview),
-            alias: getEpisodeAlias(episode.id),
-            accountName: episode.account_id ? (accountData[episode.account_id]?.name || `Conta ${episode.account_id.slice(0, 6).toUpperCase()}`) : "Conta não vinculada",
-          };
-        }),
-      );
+
+      const latestInterventionByEpisode = new Map<string, Intervention>();
+      for (const intervention of interventions) {
+        if (!latestInterventionByEpisode.has(intervention.episode_id)) {
+          latestInterventionByEpisode.set(intervention.episode_id, intervention);
+        }
+      }
+
+      const latestReviewByIntervention = new Map<string, Review>();
+      for (const review of reviews) {
+        if (!latestReviewByIntervention.has(review.intervention_id)) {
+          latestReviewByIntervention.set(review.intervention_id, review);
+        }
+      }
+
+      const enriched = episodes.map((episode) => {
+        const intervention = latestInterventionByEpisode.get(episode.id) ?? null;
+        const latestReview = intervention ? (latestReviewByIntervention.get(intervention.id) ?? null) : null;
+        return {
+          episode,
+          intervention,
+          latestReview,
+          state: deriveDisplayState(episode, intervention, latestReview),
+          alias: getEpisodeAlias(episode.id),
+          accountName: episode.account_id ? (accountData[episode.account_id]?.name || `Conta ${episode.account_id.slice(0, 6).toUpperCase()}`) : "Conta não vinculada",
+        };
+      });
       setRows(enriched);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro inesperado.");
@@ -160,6 +179,20 @@ export default function HomePage() {
     return result;
   }, [rows, quickView, typeFilter, stateFilter, query, sortMode]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const paginatedRows = useMemo(
+    () => filteredRows.slice((page - 1) * pageSize, page * pageSize),
+    [filteredRows, page, pageSize],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [quickView, typeFilter, stateFilter, query, sortMode, pageSize]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
   const hasExplicitFilters = typeFilter !== "all" || stateFilter !== "all" || query.trim().length > 0;
 
   function clearFilters() {
@@ -187,7 +220,7 @@ export default function HomePage() {
           <QuickViewButton active={quickView === "recovering"} onClick={() => setQuickView("recovering")}>Em acompanhamento</QuickViewButton>
           <QuickViewButton active={quickView === "exceptions"} onClick={() => setQuickView("exceptions")}>Exceções</QuickViewButton>
         </div>
-        <div className="">
+        <div>
           <Link
             href="/episodes/new"
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
@@ -195,7 +228,6 @@ export default function HomePage() {
             <Plus size={16} /> Registrar episódio
           </Link>
         </div>
-
       </div>
 
       <div className="mb-4 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
@@ -269,14 +301,6 @@ export default function HomePage() {
 
       {!loading && !error && rows.length > 0 ? (
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-soft">
-          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-            <div>
-              <div className="text-sm font-semibold text-gray-900">Fila de episódios</div>
-              <div className="mt-0.5 text-[11px] text-gray-500">{filteredRows.length} de {rows.length} episódios visíveis</div>
-            </div>
-            <div className="text-[11px] text-gray-400">Clique em qualquer linha para abrir o ciclo</div>
-          </div>
-
           {filteredRows.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <div className="text-sm font-semibold text-gray-800">Nenhum episódio encontrado</div>
@@ -298,11 +322,24 @@ export default function HomePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filteredRows.map((row) => <EpisodeTableRow key={row.episode.id} row={row} />)}
+                  {paginatedRows.map((row) => <EpisodeTableRow key={row.episode.id} row={row} />)}
                 </tbody>
               </table>
             </div>
           )}
+
+          {filteredRows.length > 0 ? (
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={filteredRows.length}
+              onPageChange={setPage}
+              onPageSizeChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              }}
+            />
+          ) : null}
         </div>
       ) : null}
     </AppShell>

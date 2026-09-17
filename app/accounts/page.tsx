@@ -6,9 +6,10 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ErrorBox } from "@/components/error-box";
 import { LoadingBlock } from "@/components/loading";
+import { Pagination } from "@/components/pagination";
 import { getAllAccountPrivateData } from "@/lib/local-private";
 import { listAccounts, listEpisodes } from "@/lib/repository";
-import type { Account, Episode } from "@/lib/types";
+import type { Account } from "@/lib/types";
 
 type Row = { account: Account; name: string; owner?: string; attributes: Record<string, string>; episodeCount: number; openCount: number };
 
@@ -17,6 +18,8 @@ export default function AccountsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     (async () => {
@@ -24,16 +27,26 @@ export default function AccountsPage() {
         setLoading(true);
         const [accounts, episodes] = await Promise.all([listAccounts(), listEpisodes()]);
         const privateData = getAllAccountPrivateData();
+        const episodeCounts = new Map<string, { total: number; open: number }>();
+
+        for (const episode of episodes) {
+          if (!episode.account_id) continue;
+          const current = episodeCounts.get(episode.account_id) ?? { total: 0, open: 0 };
+          current.total += 1;
+          if (!episode.closed_at) current.open += 1;
+          episodeCounts.set(episode.account_id, current);
+        }
+
         setRows(accounts.map((account) => {
           const data = privateData[account.id] || { name: `Conta ${account.id.slice(0, 6).toUpperCase()}`, owner: undefined, attributes: {} };
-          const accountEpisodes = episodes.filter((episode) => episode.account_id === account.id);
+          const counts = episodeCounts.get(account.id) ?? { total: 0, open: 0 };
           return {
             account,
             name: data.name,
             owner: data.owner,
             attributes: data.attributes,
-            episodeCount: accountEpisodes.length,
-            openCount: accountEpisodes.filter((episode) => !episode.closed_at).length,
+            episodeCount: counts.total,
+            openCount: counts.open,
           };
         }));
       } catch (e) {
@@ -49,6 +62,20 @@ export default function AccountsPage() {
     if (!needle) return rows;
     return rows.filter((row) => `${row.name} ${row.owner ?? ""}`.toLocaleLowerCase("pt-BR").includes(needle));
   }, [rows, query]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = useMemo(
+    () => filtered.slice((page - 1) * pageSize, page * pageSize),
+    [filtered, page, pageSize],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, pageSize]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   return (
     <AppShell>
@@ -81,14 +108,25 @@ export default function AccountsPage() {
           <h2 className="mt-4 font-semibold">Traga sua carteira para o Ohrly</h2>
           <p className="mx-auto mt-1 max-w-lg text-sm leading-6 text-gray-500">Importe um CSV com uma linha por conta ou cadastre a primeira manualmente. Os dados identificáveis ficam apenas neste navegador.</p>
           <div className="mt-4 flex justify-center gap-2"><Link href="/accounts/import" className="rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white">Importar CSV</Link><Link href="/accounts/new" className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold">Cadastrar manualmente</Link></div>
-        </div>
+        </div>    
       ) : null}
 
       {!loading && !error && rows.length > 0 ? (
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-soft">
-          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3"><div><div className="text-sm font-semibold">Carteira</div><div className="mt-0.5 text-[11px] text-gray-500">{filtered.length} de {rows.length} contas</div></div><div className="text-[11px] text-gray-400">Conta = contexto · episódio = trabalho</div></div>
           {filtered.length === 0 ? <div className="px-6 py-12 text-center text-sm text-gray-500">Nenhuma conta encontrada.</div> : (
-            <div className="overflow-x-auto"><table className="w-full min-w-[720px] border-collapse text-left"><thead className="bg-gray-50/80"><tr className="border-b border-gray-100 text-[10px] font-extrabold uppercase tracking-[0.08em] text-gray-400"><th className="px-4 py-3">Conta</th><th className="px-4 py-3">Responsável</th><th className="px-4 py-3">Episódios</th><th className="px-4 py-3">Abertos</th><th className="px-4 py-3">Contexto importado</th></tr></thead><tbody className="divide-y divide-gray-100">{filtered.map((row) => <AccountRow key={row.account.id} row={row} />)}</tbody></table></div>
+            <>
+              <div className="overflow-x-auto"><table className="w-full min-w-[720px] border-collapse text-left"><thead className="bg-gray-50/80"><tr className="border-b border-gray-100 text-[10px] font-extrabold uppercase tracking-[0.08em] text-gray-400"><th className="px-4 py-3">Conta</th><th className="px-4 py-3">Responsável</th><th className="px-4 py-3">Episódios</th><th className="px-4 py-3">Abertos</th><th className="px-4 py-3">Contexto importado</th></tr></thead><tbody className="divide-y divide-gray-100">{paginated.map((row) => <AccountRow key={row.account.id} row={row} />)}</tbody></table></div>
+              <Pagination
+                page={page}
+                pageSize={pageSize}
+                total={filtered.length}
+                onPageChange={setPage}
+                onPageSizeChange={(nextPageSize) => {
+                  setPageSize(nextPageSize);
+                  setPage(1);
+                }}
+              />
+            </>
           )}
         </div>
       ) : null}
