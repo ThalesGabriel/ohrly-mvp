@@ -43,11 +43,11 @@ export default function LoginPage() {
       <section className="hidden bg-gray-900 px-12 py-12 text-white lg:flex lg:flex-col lg:justify-between xl:px-16">
         <div>
           <div className="text-[24px] font-extrabold tracking-[-0.04em]">ohrly</div>
-          <div className="mt-1 text-xs text-gray-400">Closed-loop Customer Success</div>
+          <div className="mt-1 text-sm text-gray-400">Closed-loop Customer Success</div>
         </div>
 
         <div className="max-w-xl pb-10">
-          <div className="mb-5 inline-flex rounded-full border border-gray-700 px-3 py-1.5 text-[11px] font-semibold text-gray-300">EARLY ACCESS</div>
+          <div className="mb-5 inline-flex rounded-full border border-gray-700 px-3 py-1.5 text-sm font-semibold text-gray-300">EARLY ACCESS</div>
           <h1 className="text-4xl font-extrabold leading-[1.08] tracking-[-0.045em] xl:text-5xl">
             Acompanhe a história entre o primeiro sinal e o resultado.
           </h1>
@@ -56,20 +56,20 @@ export default function LoginPage() {
           </p>
 
           <div className="mt-8 grid gap-3 text-sm text-gray-300">
-            <div className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800 text-xs font-bold">1</span> Observe uma mudança persistente.</div>
-            <div className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800 text-xs font-bold">2</span> Acompanhe a intervenção real.</div>
-            <div className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800 text-xs font-bold">3</span> Volte para revisar recuperação, piora ou recaída.</div>
+            <div className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800 text-sm font-bold">1</span> Observe uma mudança persistente.</div>
+            <div className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800 text-sm font-bold">2</span> Acompanhe a intervenção real.</div>
+            <div className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800 text-sm font-bold">3</span> Volte para revisar recuperação, piora ou recaída.</div>
           </div>
         </div>
 
-        <div className="text-[11px] leading-5 text-gray-500">Field MVP · Dados operacionais livres permanecem locais no navegador.</div>
+        <div className="text-sm leading-5 text-gray-500">Field MVP · Dados operacionais livres permanecem locais no navegador.</div>
       </section>
 
       <section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8">
         <div className="w-full max-w-md">
           <div className="mb-9 lg:hidden">
             <div className="text-[24px] font-extrabold tracking-[-0.04em]">ohrly</div>
-            <div className="mt-1 text-xs text-gray-500">Closed-loop Customer Success</div>
+            <div className="mt-1 text-sm text-gray-500">Closed-loop Customer Success</div>
           </div>
 
           <div className="rounded-[24px] border border-gray-200 bg-white p-7 shadow-soft sm:p-8">
@@ -82,7 +82,7 @@ export default function LoginPage() {
                 </div>
 
                 <form onSubmit={submit}>
-                  <label className="block text-xs font-semibold text-gray-700" htmlFor="email">E-mail</label>
+                  <label className="block text-sm font-semibold text-gray-700" htmlFor="email">E-mail</label>
                   <div className="relative mt-2">
                     <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                     <input
@@ -97,7 +97,7 @@ export default function LoginPage() {
                     />
                   </div>
 
-                  {error ? <div className="mt-3 rounded-xl bg-red-50 px-3 py-2.5 text-xs leading-5 text-red-700">{error}</div> : null}
+                  {error ? <div className="mt-3 rounded-xl bg-red-50 px-3 py-2.5 text-sm leading-5 text-red-700">{error}</div> : null}
 
                   <button
                     type="submit"
@@ -109,7 +109,7 @@ export default function LoginPage() {
                   </button>
                 </form>
 
-                <div className="mt-5 border-t border-gray-100 pt-5 text-center text-[11px] leading-5 text-gray-400">
+                <div className="mt-5 border-t border-gray-100 pt-5 text-center text-sm leading-5 text-gray-400">
                   Ao entrar, você acessa somente os episódios associados à sua própria conta.
                 </div>
               </>
@@ -123,7 +123,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setSent(false)}
-                  className="mt-6 text-xs font-semibold text-gray-700 underline underline-offset-4"
+                  className="mt-6 text-sm font-semibold text-gray-700 underline underline-offset-4"
                 >
                   Usar outro e-mail
                 </button>
@@ -131,7 +131,7 @@ export default function LoginPage() {
             )}
           </div>
 
-          <div className="mt-5 text-center text-[11px] leading-5 text-gray-400">Ohrly · Early access para operações de Customer Success.</div>
+          <div className="mt-5 text-center text-sm leading-5 text-gray-400">Ohrly · Early access para operações de Customer Success.</div>
         </div>
       </section>
     </div>

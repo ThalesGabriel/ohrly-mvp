@@ -1,4 +1,21 @@
-company_id,company_name,cs_owner,health_score,usage_30d,open_tickets,renewal_date,mrr
-acme-001,Acme,Maria,72,184,3,2026-11-10,4500
-foo-002,Foo Corp,João,48,73,9,2026-10-01,7200
-umbrella-003,Umbrella,Ana,84,251,1,2027-01-20,9800
+account_id,account_name,cs_owner,segment,journey_stage,health_score,usage_30d,usage_change_pct,open_tickets,nps,renewal_date,mrr,last_contact_days
+acc-001,Aurora Labs,Ana,Enterprise,Onboarding,74,186,-18,4,7,2026-11-12,12800,3
+acc-002,Nuvora Sistemas,Bruno,Mid-market,Onboarding,58,92,-31,8,5,2026-10-03,6900,9
+acc-003,AtlasFlow,Carla,Enterprise,Adoção,83,311,6,1,9,2027-01-22,15400,2
+acc-004,PlenaPay,Diego,SMB,Adoção,66,144,-12,5,6,2026-12-18,4200,6
+acc-005,Vértice Cloud,Ana,Enterprise,Ongoing,49,77,-44,11,3,2026-10-28,18750,14
+acc-006,Lumina HR,Bruno,Mid-market,Ongoing,78,208,3,2,8,2027-02-10,8300,4
+acc-007,Orbe Gestão,Carla,SMB,Renovação,61,126,-22,6,6,2026-09-30,3900,10
+acc-008,Cobalto Tech,Diego,Enterprise,Ongoing,88,402,11,1,9,2027-03-15,22100,1
+acc-009,Marea Commerce,Ana,Mid-market,Onboarding,55,69,-37,9,4,2026-11-01,7600,12
+acc-010,Senda Analytics,Bruno,Enterprise,Renovação,71,173,-9,3,7,2026-10-14,14900,5
+acc-011,PrismaDesk,Carla,SMB,Adoção,92,356,18,0,10,2027-04-02,5100,1
+acc-012,Tessera ERP,Diego,Mid-market,Ongoing,64,131,-17,7,5,2026-12-05,9400,8
+acc-013,VivaOps,Ana,Enterprise,Renovação,46,81,-48,12,2,2026-09-25,19600,16
+acc-014,Ponto Norte,Bruno,SMB,Onboarding,69,107,-6,2,7,2027-01-08,3600,4
+acc-015,Mosaico SaaS,Carla,Mid-market,Adoção,81,243,8,3,8,2027-02-27,8800,2
+acc-016,EloWorks,Diego,Enterprise,Ongoing,57,118,-27,10,4,2026-10-20,17300,11
+acc-017,Kairós Digital,Ana,SMB,Renovação,76,165,2,1,8,2026-11-30,4700,3
+acc-018,Sirius One,Bruno,Mid-market,Ongoing,68,152,-14,5,6,2027-01-17,10200,7
+acc-019,Arco Data,Carla,Enterprise,Adoção,85,298,9,2,9,2027-03-09,20900,2
+acc-020,Faro Systems,Diego,SMB,Onboarding,52,63,-35,8,4,2026-10-07,4400,13
